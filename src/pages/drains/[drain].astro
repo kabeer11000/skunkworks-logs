@@ -1,0 +1,35 @@
+---
+import Editor from "@/components/editor";
+import Navigation from "@/components/navigation.astro";
+import Onboarding from "@/components/onboarding.astro";
+import Layout from "@/layouts/Layout.astro";
+
+
+const cookie = Astro.cookies.get('sk_identity');
+const identity = cookie ? cookie.json() : null;
+const drainId = Astro.params.drain;
+// Welcome to Astro! Wondering what to do next? Check out the 0Astro documentation at https://docs.astro.build
+// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+---
+
+<Layout>
+	<script>
+		import '@material/web/dialog/dialog.js';
+		import '@material/web/button/outlined-button.js';
+		import '@material/web/button/text-button.js';
+		import '@material/web/button/filled-button.js';
+		import '@material/web/textfield/outlined-text-field.js';
+	</script>
+	{identity ? (
+		<div class="flex w-full">
+			{/* Contains drain creation code as well */}
+			<Navigation />
+			<!-- Content View -->
+			<div class="p-8 overflow-y-auto max-h-screen max-w-4xl mx-auto">
+				<Editor id={drainId} client:only="react" />
+			</div>
+		</div>
+	) : (
+		<Onboarding />
+	)}
+</Layout>
