@@ -10,7 +10,12 @@ import { db } from '@/services/db'
 import { $drains } from '@/helpers/drains'
 import { $identity } from '@/services/identity'
 import { Placeholder } from '@tiptap/extensions'
-
+// used to generate color from id
+const shortRGB = (str: string) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return `rgb(${h & 255}, ${(h >> 8) & 255}, ${(h >> 16) & 255})`;
+};
 export default ({ id }: { id: string }) => {
   const saveTimeout = useRef<NodeJS.Timeout | null>(null)
   const lastKnownHtml = useRef<string | null>(null)
@@ -53,7 +58,7 @@ export default ({ id }: { id: string }) => {
     }
   }
 
-  const editor = useEditor({ 
+  const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       TextStyleKit,
@@ -65,7 +70,7 @@ export default ({ id }: { id: string }) => {
       }),
       AutoAuthorExtension.configure({
         authorName: $identity.get().name,
-        authorColor: $identity.get().color,
+        authorColor: shortRGB($identity.get().publicUserId),
       }),
     ],
     content: '',
