@@ -101,9 +101,8 @@
             createdBy: $identity.get().publicUserId,
             createdAt: Date.now(),
         };
-
+        // Will automatically trigger since populateDrain sets up a listener
         await db.put(doc);
-        await populateDrains();
     });
 </script>
 <div>

@@ -1,2 +1,2 @@
 import PouchDB from 'pouchdb';
-export const db = new PouchDB('skunkworks-logs');
+export const db = new PouchDB('main');

@@ -1,6 +1,6 @@
 import { db } from './db.js';
 
-const REMOTE_URL = import.meta.env.VITE_COUCHDB_URL || 'http://localhost:5984/main';
+const REMOTE_URL = import.meta.env.VITE_COUCHDB_URL || 'http://admin:password@localhost:5984/main';
 
 let handler = null;
 

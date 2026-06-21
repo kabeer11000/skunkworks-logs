@@ -16,7 +16,7 @@ export default (props: MarkViewRendererProps) => {
     >
       <span 
         aria-hidden="true"
-        className="absolute bg-[var(--author-color)]/50 -inset-y-[3px] -inset-x-[4px] -z-10 rounded-[6px] transition-colors duration-150 ease-in-out pointer-events-none group-hover:bg-[var(--author-color)] group-active:bg-[var(--author-color)] group-focus-within:bg-[var(--author-color)]"
+        className="absolute bg-[var(--author-color)]/30 -inset-y-[3px] -inset-x-[4px] -z-10 rounded-[6px] transition-colors duration-150 ease-in-out pointer-events-none group-hover:bg-[var(--author-color)] group-active:bg-[var(--author-color)] group-focus-within:bg-[var(--author-color)]"
       />
 
       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max bg-neutral-800 text-white text-xs px-2 py-1 rounded shadow-md z-50">
