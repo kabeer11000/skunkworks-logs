@@ -21,10 +21,10 @@ const identity = cookie ? cookie.json() : null;
 	</script>
 	{identity ? (
 		<div class="flex w-full">
-			<Navigation />
+			<Navigation transition:persist/>
 			<!-- Content View -->
 			<div class="p-8 h-200 w-200 mt-10 overflow-y-auto max-h-screen flex items-center flex-col justify-center rounded-full gap-y-4 mx-auto bg-radial from-neutral-300 to-60% to-white">
-				<img src="/logo/skunkworks-transparent.png" class="w-60 h-60 grayscale opacity-60"/>
+				<img src="/logo/skunkworks-text.svg" class="w-60 grayscale opacity-60"/>
 				<div>Select a drain from the sidebar to get started</div>
 			</div>
 		</div>

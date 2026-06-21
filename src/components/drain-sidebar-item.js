@@ -48,9 +48,10 @@ export default class DrainSidebarItem extends HTMLElement {
       titleEl.textContent = drain.title || 'Untitled';
       descEl.textContent = `Visibility: ${drain.visibility}`;
 
-      // Dynamically set the href (e.g., routing to the drain's ID)
+      // Strip 'notebook:' prefix for clean URLs
+      const shortId = drain.id.replace('notebook:', '');
       if (drain.id) {
-        listItem.setAttribute('href', `/drains/${drain.id}`); 
+        listItem.setAttribute('href', `/drains/${shortId}`); 
       }
 
       // Dynamically change icon based on visibility
