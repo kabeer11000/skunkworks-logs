@@ -6,6 +6,8 @@
 // header rather than left embedded in the URL passed to fetch() — native
 // fetch (both browsers and Node's undici, which is what Vercel functions
 // use) rejects URLs containing userinfo ("URL contains credentials").
+import { ulid } from 'ulid'
+
 const ADMIN_URL = import.meta.env.COUCHDB_ADMIN_URL as string | undefined
 
 let cached: { origin: string; authHeader: string } | null = null
@@ -240,6 +242,101 @@ export async function removeDirectoryDrain(email: string, dbName: string) {
     (doc) => ({ ...doc, drains: (doc.drains ?? []).filter((d: DirectoryDrainEntry) => d.dbName !== dbName) }),
     () => ({ _id: `user:${email}`, type: 'directory', drains: [] })
   )
+}
+
+// Both public share links (`/public/:token`) and GitHub ingestion URLs
+// (`/api/ingest/:token`) need to resolve a bare token back to a dbName
+// without knowing it in advance — no per-drain database can answer "which
+// token points at me" for a request that doesn't know which database to ask
+// yet, so the reverse mapping lives as its own doc in the directory
+// database, the one admin-only db already used for this kind of
+// cross-database lookup. `kind` namespaces the two token spaces (a
+// `public:<token>` doc can't collide with an `ingest:<token>` doc even if
+// the token strings ever matched). The token is also cached on the drain's
+// own notebook doc under `${kind}Token`, purely so the owner's edit dialog
+// can show current status without a second lookup.
+async function setDrainToken(dbName: string, kind: 'public' | 'ingest', token: string | null) {
+  const field = `${kind}Token`
+  const notebook = await getAdminDoc(dbName, 'notebook')
+  const oldToken = notebook?.[field] as string | undefined
+  if (oldToken && oldToken !== token) {
+    const oldDoc = await getAdminDoc(DIRECTORY_DB, `${kind}:${oldToken}`)
+    if (oldDoc) {
+      await adminFetch(`/${DIRECTORY_DB}/${encodeURIComponent(oldDoc._id)}?rev=${oldDoc._rev}`, { method: 'DELETE' }).catch(() => {})
+    }
+  }
+  await putAdminDoc(dbName, { ...notebook, [field]: token ?? undefined })
+  if (token) {
+    await ensureDirectoryDbExists()
+    await putAdminDoc(DIRECTORY_DB, { _id: `${kind}:${token}`, dbName })
+  }
+}
+
+async function getDrainByToken(kind: 'public' | 'ingest', token: string): Promise<{ dbName: string } | null> {
+  const doc = await getAdminDoc(DIRECTORY_DB, `${kind}:${token}`)
+  return doc ? { dbName: doc.dbName } : null
+}
+
+export const setDrainPublicToken = (dbName: string, token: string | null) => setDrainToken(dbName, 'public', token)
+export const getDrainByPublicToken = (token: string) => getDrainByToken('public', token)
+
+export const setDrainIngestionToken = (dbName: string, token: string | null) => setDrainToken(dbName, 'ingest', token)
+export const getDrainByIngestionToken = (token: string) => getDrainByToken('ingest', token)
+
+// Ingestion tokens always exist once first requested (unlike publish, which
+// is an explicit opt-in) — the URL itself only becomes live once the owner
+// actually adds it as a GitHub webhook, so there's no "leak" from having one
+// ready before that.
+export async function getOrCreateIngestionToken(dbName: string): Promise<string> {
+  const notebook = await getAdminDoc(dbName, 'notebook')
+  if (notebook?.ingestToken) return notebook.ingestToken
+  const token = ulid()
+  await setDrainIngestionToken(dbName, token)
+  return token
+}
+
+export async function recordIngestionEvent(dbName: string) {
+  const notebook = await getAdminDoc(dbName, 'notebook')
+  await putAdminDoc(dbName, { ...notebook, lastIngestedAt: Date.now() })
+}
+
+const GITHUB_AUTHOR = {
+  createdBy: 'github-ingestion',
+  createdByName: 'GitHub',
+  createdByColor: '#6e5494',
+  createdByEmail: 'github-ingestion@skunkworks.local',
+  source: 'github',
+}
+
+export async function createIngestedEntry(dbName: string, content: string, createdAt: number) {
+  const doc = {
+    _id: `entry:${ulid()}`,
+    type: 'entry',
+    content,
+    ...GITHUB_AUTHOR,
+    updatedBy: GITHUB_AUTHOR.createdBy,
+    updatedByName: GITHUB_AUTHOR.createdByName,
+    updatedByColor: GITHUB_AUTHOR.createdByColor,
+    updatedByEmail: GITHUB_AUTHOR.createdByEmail,
+    createdAt,
+    updatedAt: createdAt,
+  }
+  await putAdminDoc(dbName, doc)
+}
+
+export async function getPublicEntries(dbName: string) {
+  const qs = new URLSearchParams({
+    startkey: JSON.stringify('entry:'),
+    endkey: JSON.stringify('entry:￿'),
+    include_docs: 'true',
+  })
+  const res = await adminFetch(`/${dbName}/_all_docs?${qs}`)
+  if (!res.ok) throw new Error(`Failed to read entries for ${dbName} (${res.status})`)
+  const data = await res.json()
+  return data.rows
+    .map((r: any) => r.doc)
+    .filter(Boolean)
+    .sort((a: any, b: any) => a.createdAt - b.createdAt)
 }
 
 // The directory caches each drain's title/description/tags so the sidebar

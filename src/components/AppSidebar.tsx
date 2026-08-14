@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download } from 'lucide-react'
+import { exportDrainMarkdown } from '@/utils/exportDrain'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
 import { getAuthCredential } from '@/services/authSession'
@@ -41,12 +42,14 @@ interface Drain {
 function DrainCard({
   drain,
   active,
+  dimmed,
   onEdit,
   onDelete,
   onCopyLink,
 }: {
   drain: Drain
   active: boolean
+  dimmed: boolean
   onEdit: (dbName: string) => void
   onDelete: (dbName: string) => void
   onCopyLink: (dbName: string) => void
@@ -69,9 +72,9 @@ function DrainCard({
         e.preventDefault()
         triggerRef.current?.click()
       }}
-      className={`group relative mb-2 flex flex-col gap-1 break-inside-avoid rounded-lg border p-3 transition-colors ${FOCUS_RING} ${
+      className={`group relative mb-2 flex flex-col gap-1 break-inside-avoid rounded-lg border p-3 transition-opacity transition-colors ${FOCUS_RING} ${
         active ? 'border-neutral-300 bg-secondary' : 'border-neutral-200 hover:bg-secondary/70'
-      }`}
+      } ${dimmed ? 'opacity-40' : ''}`}
     >
       <div className="flex items-start justify-between gap-1.5">
         <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-snug">
@@ -106,6 +109,10 @@ function DrainCard({
               <DropdownMenuItem onClick={() => onCopyLink(drain.dbName)}>
                 <Link className="size-3.5" />
                 Copy link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportDrainMarkdown(drain.dbName, drain.title || 'Untitled')}>
+                <Download className="size-3.5" />
+                Export as Markdown
               </DropdownMenuItem>
               {drain.role === 'owner' && (
                 <>
@@ -168,6 +175,22 @@ export default function AppSidebar() {
     isOwner: boolean
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    for (const d of drains) for (const t of d.tags || []) set.add(t)
+    return Array.from(set).sort()
+  }, [drains])
+
+  const toggleTag = (tag: string) => {
+    setActiveTags((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
 
   useEffect(() => {
     const identity = getStoredIdentityClient()
@@ -236,6 +259,25 @@ export default function AppSidebar() {
           </div>
           <div className="mb-3 text-xs text-neutral-400">Your personal engineering log</div>
 
+          {allTags.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`rounded-full border px-2 py-0.5 text-[0.6875rem] transition-colors ${FOCUS_RING} ${
+                    activeTags.has(tag)
+                      ? 'border-neutral-800 bg-neutral-800 text-white'
+                      : 'border-neutral-200 text-muted-foreground hover:bg-secondary'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+
           {loading ? (
             <div className="mt-3 columns-1 gap-2 sm:columns-2">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -247,11 +289,13 @@ export default function AppSidebar() {
               <div className="mt-3 columns-1 gap-2 sm:columns-2">
                 {drains.map((drain: any) => {
                   const href = `/drains/${drain.dbName}`
+                  const dimmed = activeTags.size > 0 && !(drain.tags || []).some((t: string) => activeTags.has(t))
                   return (
                     <DrainCard
                       key={drain.dbName}
                       drain={drain}
                       active={currentPath === href}
+                      dimmed={dimmed}
                       onEdit={handleEdit}
                       onDelete={(dbName) => setDeleteTarget({ dbName, title: drain.title || 'this drain' })}
                       onCopyLink={handleCopyLink}

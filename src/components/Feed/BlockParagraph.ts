@@ -49,6 +49,15 @@ export const BlockParagraph = Paragraph.extend({
         renderHTML: (attrs: any) =>
           attrs.createdByName ? { 'data-created-by': attrs.createdByName } : {},
       },
+      // Set only for entries created by an integration (e.g. GitHub webhook
+      // ingestion, see api/ingest/[token].ts) — distinguishes bot-authored
+      // entries from ones a person typed, so EntryBlockView can render a
+      // different badge instead of the usual colored-dot author indicator.
+      source: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-source'),
+        renderHTML: (attrs: any) => (attrs.source ? { 'data-source': attrs.source } : {}),
+      },
       // Explicitly managed by ensureLeadingComposer in Feed/index.tsx —
       // distinguishes "the one pinned composer slot at the top" from any
       // other paragraph that happens to be empty (e.g. a real entry edited

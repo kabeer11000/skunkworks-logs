@@ -196,6 +196,15 @@
 /* Author/history details are a real Popover now (EntryBlockView.tsx),
    triggered by a small hover-revealed button rendered inside the block. */
 
+/* @mention pill (MentionExtension.ts) — background/text color set inline
+   per-mention via a deterministic hash of the mentioned email. */
+.mention-pill {
+    border-radius: 4px;
+    padding: 0 4px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 /* Comment highlight (CommentMark.ts) — the range a CommentCard is anchored to */
 .tiptap mark[data-comment-id] {
     background: oklch(0.9 0.11 95 / 0.6);

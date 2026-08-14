@@ -14,6 +14,7 @@ import { sanitizeHtml } from '@/services/sanitize'
 import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
 import { CommentMark } from './CommentMark'
+import { createMentionExtension } from './MentionExtension'
 import { CommentsAside } from './CommentsAside'
 import { OutlineAside } from './OutlineAside'
 import { AddCommentPopover } from './AddCommentPopover'
@@ -54,6 +55,7 @@ function entryToBlockHtml(entry: any, rid: string) {
   if (entry.updatedAt) p.setAttribute('data-updated-at', String(entry.updatedAt))
   if (entry.createdAt) p.setAttribute('data-created-at', String(entry.createdAt))
   p.setAttribute('data-created-by', safeName(entry.createdByName ?? entry.updatedByName))
+  if (entry.source) p.setAttribute('data-source', entry.source)
 
   return p.outerHTML
 }
@@ -125,6 +127,7 @@ export default function Feed({ dbName }: { dbName: string }) {
       BlockParagraph,
       CommentMark,
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),
+      createMentionExtension(dbName),
     ],
     content: '',
     onUpdate: () => scheduleSave(),
@@ -317,6 +320,20 @@ export default function Feed({ dbName }: { dbName: string }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, db])
+
+  // Command palette search results link to `#entry-<id>` — jump to it once
+  // the initial page has rendered. Only searches the already-loaded page;
+  // an older entry not yet paginated in simply won't be found (same
+  // best-effort limitation OutlineAside's jumpTo already has).
+  useEffect(() => {
+    if (!initialLoaded) return
+    const hash = window.location.hash
+    if (!hash.startsWith('#entry-')) return
+    const entryId = hash.slice('#entry-'.length)
+    scrollRef.current
+      ?.querySelector(`[data-entry-id="${entryId}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [initialLoaded])
 
   // Load older pages when the bottom sentinel scrolls into view — older
   // entries append at the end, which doesn't disturb the current scroll

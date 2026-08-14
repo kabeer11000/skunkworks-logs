@@ -12,7 +12,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateDrainMeta } from '@/helpers/drains'
 import { populateDrains } from '@/helpers/drains'
-import { listDrainMembers, inviteToDrain, removeDrainMemberApi } from '@/services/drainsApi'
+import {
+  listDrainMembers,
+  inviteToDrain,
+  removeDrainMemberApi,
+  getPublishStatus,
+  publishDrain,
+  unpublishDrain,
+  getIngestionStatus,
+  regenerateIngestionToken,
+} from '@/services/drainsApi'
 import { $identity } from '@/services/identity'
 import { X } from 'lucide-react'
 
@@ -49,10 +58,67 @@ export default function RenameDrainDialog({
   const [inviteError, setInviteError] = useState('')
   const [inviting, setInviting] = useState(false)
 
+  const [publicToken, setPublicToken] = useState<string | null>(null)
+  const [publishBusy, setPublishBusy] = useState(false)
+  const [publishError, setPublishError] = useState('')
+
   useEffect(() => {
     if (!open || visibility !== 'shared') return
     listDrainMembers(drainId).then(setMembers).catch(() => setMembers([]))
   }, [open, drainId, visibility])
+
+  useEffect(() => {
+    if (!open || !isOwner) return
+    getPublishStatus(drainId).then((s) => setPublicToken(s.token)).catch(() => {})
+  }, [open, drainId, isOwner])
+
+  const handleTogglePublish = async () => {
+    setPublishBusy(true)
+    setPublishError('')
+    try {
+      if (publicToken) {
+        await unpublishDrain(drainId)
+        setPublicToken(null)
+      } else {
+        const { token } = await publishDrain(drainId)
+        setPublicToken(token)
+      }
+    } catch (err: any) {
+      setPublishError(err?.message ?? 'Failed to update publish status')
+    } finally {
+      setPublishBusy(false)
+    }
+  }
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const publicUrl = publicToken ? `${origin}/public/${publicToken}` : ''
+
+  const [ingestionToken, setIngestionToken] = useState<string | null>(null)
+  const [lastIngestedAt, setLastIngestedAt] = useState<number | null>(null)
+  const [ingestionBusy, setIngestionBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open || !isOwner) return
+    getIngestionStatus(drainId)
+      .then((s) => {
+        setIngestionToken(s.token)
+        setLastIngestedAt(s.lastIngestedAt)
+      })
+      .catch(() => {})
+  }, [open, drainId, isOwner])
+
+  const ingestionUrl = ingestionToken ? `${origin}/api/ingest/${ingestionToken}` : ''
+
+  const handleRegenerateIngestion = async () => {
+    setIngestionBusy(true)
+    try {
+      const { token } = await regenerateIngestionToken(drainId)
+      setIngestionToken(token)
+      setLastIngestedAt(null)
+    } finally {
+      setIngestionBusy(false)
+    }
+  }
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -226,6 +292,74 @@ export default function RenameDrainDialog({
               </div>
             )}
             {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
+          </div>
+        )}
+
+        {isOwner && (
+          <div className="grid gap-2 border-t pt-3">
+            <Label>Public link</Label>
+            <p className="text-xs text-muted-foreground">
+              Anyone with the link can view this drain read-only — no sign-in required.
+            </p>
+            {publicToken && (
+              <div className="flex gap-1.5">
+                <Input readOnly value={publicUrl} onFocus={(e) => e.target.select()} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigator.clipboard.writeText(publicUrl)}
+                >
+                  Copy
+                </Button>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTogglePublish}
+              disabled={publishBusy}
+            >
+              {publishBusy ? 'Working…' : publicToken ? 'Unpublish' : 'Publish'}
+            </Button>
+            {publishError && <p className="text-xs text-destructive">{publishError}</p>}
+          </div>
+        )}
+
+        {isOwner && (
+          <div className="grid gap-2 border-t pt-3">
+            <Label>GitHub integration</Label>
+            <p className="text-xs text-muted-foreground">
+              Add this as a webhook in your repo's{' '}
+              <span className="font-medium">Settings → Webhooks → Add webhook</span>. Set{' '}
+              <span className="font-medium">Payload URL</span> to the link below, Content type to{' '}
+              <span className="font-medium">application/json</span>, and select the{' '}
+              <span className="font-medium">push</span> and{' '}
+              <span className="font-medium">pull requests</span> events.
+            </p>
+            <div className="flex gap-1.5">
+              <Input readOnly value={ingestionUrl} onFocus={(e) => e.target.select()} />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigator.clipboard.writeText(ingestionUrl)}
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {lastIngestedAt
+                ? `Last event received ${new Date(lastIngestedAt).toLocaleString()}`
+                : 'Waiting for the first webhook event…'}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerateIngestion}
+              disabled={ingestionBusy}
+            >
+              {ingestionBusy ? 'Working…' : 'Regenerate link'}
+            </Button>
           </div>
         )}
 

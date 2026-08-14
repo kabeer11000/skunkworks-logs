@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import AppSidebar from './AppSidebar'
+import { CommandPalette } from './CommandPalette'
 
 export default function PageShell({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function PageShell({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+      <CommandPalette />
     </div>
   )
 }

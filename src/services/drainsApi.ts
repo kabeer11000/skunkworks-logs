@@ -76,3 +76,37 @@ export async function removeDrainMemberApi(dbName: string, email: string): Promi
   })
   await parseErrorOr(res, 'Failed to remove member')
 }
+
+export async function getPublishStatus(dbName: string): Promise<{ token: string | null }> {
+  const res = await fetch(`/api/drains/${dbName}/publish`, { headers: { Authorization: authHeader() } })
+  return parseErrorOr(res, 'Failed to load publish status')
+}
+
+export async function publishDrain(dbName: string): Promise<{ token: string }> {
+  const res = await fetch(`/api/drains/${dbName}/publish`, {
+    method: 'POST',
+    headers: { Authorization: authHeader() },
+  })
+  return parseErrorOr(res, 'Failed to publish drain')
+}
+
+export async function unpublishDrain(dbName: string): Promise<void> {
+  const res = await fetch(`/api/drains/${dbName}/publish`, {
+    method: 'DELETE',
+    headers: { Authorization: authHeader() },
+  })
+  await parseErrorOr(res, 'Failed to unpublish drain')
+}
+
+export async function getIngestionStatus(dbName: string): Promise<{ token: string; lastIngestedAt: number | null }> {
+  const res = await fetch(`/api/drains/${dbName}/ingestion`, { headers: { Authorization: authHeader() } })
+  return parseErrorOr(res, 'Failed to load integration status')
+}
+
+export async function regenerateIngestionToken(dbName: string): Promise<{ token: string }> {
+  const res = await fetch(`/api/drains/${dbName}/ingestion`, {
+    method: 'POST',
+    headers: { Authorization: authHeader() },
+  })
+  return parseErrorOr(res, 'Failed to regenerate ingestion token')
+}
