@@ -2,6 +2,7 @@
 import Feed from "@/components/Feed";
 import PageShell from "@/components/PageShell";
 import Onboarding from "@/components/Onboarding";
+import SyncIndicator from "@/components/SyncIndicator";
 import Layout from "@/layouts/Layout.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
@@ -10,42 +11,10 @@ const drainId = `notebook:${Astro.params.drain}`;
 ---
 
 <Layout>
-	<script>
-		import { startSync } from '@/services/sync';
-
-		const dot = document.getElementById('sync-dot');
-		const label = document.getElementById('sync-label');
-
-		let timedOut = false;
-		const timeout = setTimeout(() => {
-			if (!dot || !label) return;
-			timedOut = true;
-			dot.className = 'w-2 h-2 rounded-full bg-neutral-300';
-			label.textContent = 'offline';
-		}, 5000);
-
-		startSync((status) => {
-			if (timedOut || !dot || !label) return;
-			clearTimeout(timeout);
-			if (status === 'active') {
-				dot.className = 'w-2 h-2 rounded-full bg-green-400';
-				label.textContent = 'synced';
-			} else if (status === 'paused') {
-				dot.className = 'w-2 h-2 rounded-full bg-yellow-400';
-				label.textContent = 'paused';
-			} else {
-				dot.className = 'w-2 h-2 rounded-full bg-red-400';
-				label.textContent = 'error';
-			}
-		});
-	</script>
 	{identity ? (
 		<PageShell client:load>
 			<div class="mx-auto w-full max-w-4xl">
-				<div id="sync-indicator" class="fixed top-4 right-6 z-50 flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
-					<span id="sync-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
-					<span id="sync-label">connecting</span>
-				</div>
+				<SyncIndicator client:load />
 				<Feed notebookId={drainId} client:only="react" />
 			</div>
 		</PageShell>

@@ -16,7 +16,9 @@ export const BlockParagraph = Paragraph.extend({
         default: null,
         parseHTML: (el: HTMLElement) => el.getAttribute('data-author-color'),
         renderHTML: (attrs: any) =>
-          attrs.authorColor ? { 'data-author-color': attrs.authorColor } : {},
+          attrs.authorColor
+            ? { 'data-author-color': attrs.authorColor, style: `background-color: color-mix(in srgb, ${attrs.authorColor} 12%, white)` }
+            : {},
       },
       authorName: {
         default: null,

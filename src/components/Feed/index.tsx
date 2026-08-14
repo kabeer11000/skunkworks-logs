@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import { DOMSerializer } from '@tiptap/pm/model'
+import { Skeleton } from '@/components/ui/skeleton'
 import { db } from '@/services/db'
 import { $identity } from '@/services/identity'
 import { loadLatestPage, loadOlderPage } from '@/utils/ulid-pages'
@@ -89,7 +90,9 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   // steady state, gating just the callback body would swallow that one
   // legitimate trigger and pagination would never fire again.
   const [initialLoaded, setInitialLoaded] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveStateResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Issue 1 fix: prevent StrictMode double-render from overwriting content
   const contentInitializedRef = useRef(false)
@@ -201,11 +204,21 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       }
     }
 
-    // Issue 6 fix: catch to prevent unhandled rejection
-    await Promise.all(ops).catch(() => {})
+    if (ops.length === 0) return
+
+    const results = await Promise.allSettled(ops)
+    const hasError = results.some((r) => r.status === 'rejected')
+    if (hasError) {
+      setSaveState('error')
+      return
+    }
+    setSaveState('saved')
+    if (saveStateResetRef.current) clearTimeout(saveStateResetRef.current)
+    saveStateResetRef.current = setTimeout(() => setSaveState('idle'), 1500)
   }, [editor, notebookId])
 
   const scheduleSave = useCallback(() => {
+    setSaveState('saving')
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(flushBlocks, SAVE_DEBOUNCE_MS)
   }, [flushBlocks])
@@ -342,14 +355,14 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           const block = findBlock(rid)
           const innerHtml = innerOf(doc.content)
           const safeAuth = safeName(doc.updatedByName)
-          const safeColor = safeColor(doc.updatedByColor)
+          const authorColor = safeColor(doc.updatedByColor)
 
           if (block) {
             const from = block.pos + 1
             const to = block.pos + block.node.nodeSize - 1
             editor.commands.insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
             editor.commands.command(({ tr }: any) => {
-              tr.setNodeAttribute(block.pos, 'authorColor', safeColor)
+              tr.setNodeAttribute(block.pos, 'authorColor', authorColor)
               tr.setNodeAttribute(block.pos, 'authorName', safeAuth)
               tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
               tr.setMeta('addToHistory', false)
@@ -378,9 +391,23 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {saveState !== 'idle' && (
+        <div className="fixed top-4 right-32 z-50 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+          {saveState === 'saving' && 'Saving…'}
+          {saveState === 'saved' && 'Saved'}
+          {saveState === 'error' && <span className="text-destructive">Couldn't save</span>}
+        </div>
+      )}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {!initialLoaded && (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full rounded-lg" />
+            ))}
+          </div>
+        )}
         <div ref={sentinelRef} />
-        <div className="min-h-full" onClick={handleContainerClick}>
+        <div className={initialLoaded ? 'min-h-full' : 'hidden'} onClick={handleContainerClick}>
           <EditorContent editor={editor} />
         </div>
       </div>
