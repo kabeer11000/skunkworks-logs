@@ -2,29 +2,25 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { $identity, deriveIdentity, saveIdentityClient } from '@/services/identity'
-import { db } from '@/services/db'
+import { $identity } from '@/services/identity'
+import { setAuthCredential } from '@/services/authSession'
 import { createGettingStartedDrain } from '@/helpers/drains'
 
-export default function Onboarding() {
+export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
+  const [password, setPassword] = useState('')
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({})
+  const [formError, setFormError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  // There's no password/verification here — email alone maps to an identity,
-  // so anyone typing an existing email would silently start acting as that
-  // person. This can't be a hard block (the same person legitimately signing
-  // in from a new device looks identical to that), so it's a warn-and-confirm
-  // step instead: pause once, show whose name is already on record, and only
-  // proceed if they explicitly continue.
-  const [collision, setCollision] = useState<{ name: string } | null>(null)
 
   const validate = () => {
-    const errs: { name?: string; email?: string } = {}
+    const errs: { name?: string; email?: string; password?: string } = {}
     if (!name.trim()) errs.name = 'Name is required'
     else if (name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
     if (!email.trim()) errs.email = 'Email is required'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address'
+    if (password.length < 8) errs.password = 'Password must be at least 8 characters'
     return errs
   }
 
@@ -36,39 +32,32 @@ export default function Onboarding() {
       return
     }
     setErrors({})
+    setFormError('')
     setIsLoading(true)
 
-    const identity = await deriveIdentity(email, name)
-    const existing: any = await db.get(`profile:${identity.publicUserId}`).catch(() => null)
-
-    if (existing && !collision) {
-      setCollision({ name: existing.name })
-      setIsLoading(false)
-      return
-    }
-
-    saveIdentityClient(identity)
-    $identity.set(identity)
-
     try {
-      if (!existing) {
-        await db.put({
-          _id: `profile:${identity.publicUserId}`,
-          type: 'profile',
-          publicUserId: identity.publicUserId,
-          name: identity.name,
-          color: identity.color,
-          createdAt: Date.now(),
-        })
-        try {
-          await createGettingStartedDrain(identity)
-        } catch {
-          // Non-fatal — worst case a new account just has an empty sidebar.
-        }
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setFormError(data.error || 'Something went wrong')
+        return
+      }
+
+      setAuthCredential(email.trim().toLowerCase(), password)
+      $identity.set(data.identity)
+
+      try {
+        await createGettingStartedDrain(data.identity)
+      } catch {
+        // Non-fatal — worst case a new account just has an empty sidebar.
       }
       window.location.href = '/'
-    } catch (err: any) {
-      if (err?.status !== 409) throw err
+    } catch {
+      setFormError('Could not reach the server. Try again.')
     } finally {
       setIsLoading(false)
     }
@@ -110,7 +99,7 @@ export default function Onboarding() {
               <svg className="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
                 <path d="M6.5 12L2 7.5l1.5-1.5L6.5 9l6-6 1.5 1.5L6.5 12z" fill="currentColor"/>
               </svg>
-              No account required to browse shared drains
+              Password-protected accounts
             </div>
           </div>
         </div>
@@ -123,26 +112,22 @@ export default function Onboarding() {
             </div>
             <h2 className="font-heading text-2xl font-semibold">Create account</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enter your name and email to get started.
+              Enter your name, email, and a password to get started.
             </p>
-            {collision && (
-              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-                <p className="font-medium text-amber-900">This email is already registered</p>
-                <p className="mt-1 text-xs text-amber-800">
-                  It's on record as <strong>{collision.name}</strong>. If that's you continuing on a new
-                  device, go ahead. If not, use a different email.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setCollision(null)}>
-                    Use a different email
-                  </Button>
-                  <Button type="button" size="sm" onClick={() => submit()} disabled={isLoading}>
-                    {isLoading ? 'Continuing…' : `Continue as ${collision.name}`}
-                  </Button>
-                </div>
+            {formError && (
+              <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {formError}
+                {formError.includes('already exists') && (
+                  <>
+                    {' '}
+                    <button type="button" className="underline" onClick={onSwitchToLogin}>
+                      Log in instead
+                    </button>
+                  </>
+                )}
               </div>
             )}
-            <form onSubmit={submit} className={`mt-8 space-y-4 ${collision ? 'hidden' : ''}`}>
+            <form onSubmit={submit} className="mt-8 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="userName">Full name</Label>
                 <Input
@@ -174,11 +159,30 @@ export default function Onboarding() {
                 />
                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="userPassword">Password</Label>
+                <Input
+                  id="userPassword"
+                  type="password"
+                  required
+                  placeholder="At least 8 characters"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (errors.password) setErrors((e) => ({ ...e, password: undefined }))
+                  }}
+                  aria-invalid={!!errors.password}
+                />
+                {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+              </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Signing up…' : 'Sign up'}
               </Button>
               <p className="text-xs text-muted-foreground">
-                This identifies your entries across devices.
+                Already have an account?{' '}
+                <button type="button" className="underline" onClick={onSwitchToLogin}>
+                  Log in
+                </button>
               </p>
             </form>
           </div>

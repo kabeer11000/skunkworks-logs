@@ -20,16 +20,6 @@ export async function deriveIdentity(email: string, name: string): Promise<Ident
   return { publicUserId, name, color, email: normalized };
 }
 
-export function saveIdentityClient(identity: Identity) {
-  // Ensure we are in the browser
-  if (typeof document === 'undefined') return;
-
-  const val = encodeURIComponent(JSON.stringify(identity));
-  // Path=/ ensures it works across the whole site
-  // max-age=31536000 keeps them logged in for 1 year
-  document.cookie = `${IDENTITY_KEY}=${val}; path=/; max-age=31536000; SameSite=Lax`;
-}
-
 export function getStoredIdentityClient() {
   if (typeof document === 'undefined') return null;
 

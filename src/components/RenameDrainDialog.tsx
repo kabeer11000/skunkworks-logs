@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,12 +12,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateDrainMeta } from '@/helpers/drains'
 import { populateDrains } from '@/helpers/drains'
+import { listDrainMembers, inviteToDrain, removeDrainMemberApi } from '@/services/drainsApi'
+import { $identity } from '@/services/identity'
+import { X } from 'lucide-react'
 
 interface EditDrainDialogProps {
   drainId: string
   currentTitle: string
   currentDescription?: string
   currentTags?: string[]
+  visibility: 'private' | 'shared'
+  isOwner: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -27,6 +32,8 @@ export default function RenameDrainDialog({
   currentTitle,
   currentDescription = '',
   currentTags = [],
+  visibility,
+  isOwner,
   open,
   onOpenChange,
 }: EditDrainDialogProps) {
@@ -37,6 +44,16 @@ export default function RenameDrainDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const [members, setMembers] = useState<string[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteError, setInviteError] = useState('')
+  const [inviting, setInviting] = useState(false)
+
+  useEffect(() => {
+    if (!open || visibility !== 'shared') return
+    listDrainMembers(drainId).then(setMembers).catch(() => setMembers([]))
+  }, [open, drainId, visibility])
+
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setTitle(currentTitle)
@@ -44,6 +61,8 @@ export default function RenameDrainDialog({
       setTags(currentTags)
       setTagInput('')
       setError('')
+      setInviteEmail('')
+      setInviteError('')
     }
     onOpenChange(next)
   }
@@ -77,6 +96,32 @@ export default function RenameDrainDialog({
       setError(err?.message ?? 'Failed to save')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim().toLowerCase()
+    if (!email) return
+    setInviting(true)
+    setInviteError('')
+    try {
+      await inviteToDrain(drainId, email)
+      setMembers((prev) => [...prev, email])
+      setInviteEmail('')
+    } catch (err: any) {
+      setInviteError(err?.message ?? 'Failed to invite')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const handleRemove = async (email: string) => {
+    setMembers((prev) => prev.filter((m) => m !== email))
+    try {
+      await removeDrainMemberApi(drainId, email)
+    } catch {
+      // Refresh from server if the optimistic removal turned out to be wrong
+      listDrainMembers(drainId).then(setMembers).catch(() => {})
     }
   }
 
@@ -146,6 +191,44 @@ export default function RenameDrainDialog({
           </div>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
+
+        {visibility === 'shared' && (
+          <div className="grid gap-2 border-t pt-3">
+            <Label>People with access</Label>
+            <div className="flex flex-col gap-1.5">
+              {members.map((email) => (
+                <div key={email} className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5 text-sm">
+                  <span>{email}</span>
+                  {isOwner && email !== $identity.get()?.email && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(email)}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Remove"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isOwner && (
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder="Invite by email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleInvite())}
+                />
+                <Button type="button" variant="outline" onClick={handleInvite} disabled={inviting}>
+                  {inviting ? 'Inviting…' : 'Invite'}
+                </Button>
+              </div>
+            )}
+            {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

@@ -1,24 +1,24 @@
 ---
 import Feed from "@/components/Feed";
 import PageShell from "@/components/PageShell";
-import Onboarding from "@/components/Onboarding";
+import AuthGate from "@/components/AuthGate";
 import SyncIndicator from "@/components/SyncIndicator";
 import Layout from "@/layouts/Layout.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
 const identity = cookie ? cookie.json() : null;
-const drainId = `notebook:${Astro.params.drain}`;
+const dbName = Astro.params.drain as string;
 ---
 
 <Layout>
 	{identity ? (
 		<PageShell client:load>
 			<div class="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
-				<SyncIndicator client:load />
-				<Feed notebookId={drainId} client:only="react" />
+				<SyncIndicator dbName={dbName} client:load />
+				<Feed dbName={dbName} client:only="react" />
 			</div>
 		</PageShell>
 	) : (
-		<Onboarding client:load />
+		<AuthGate client:load />
 	)}
 </Layout>

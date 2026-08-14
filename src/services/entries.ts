@@ -1,5 +1,3 @@
-import { ulid } from 'ulid'
-import { db } from './db'
 // @ts-ignore - plain JS module
 import { sanitizeHtml } from './sanitize'
 
@@ -7,39 +5,42 @@ export interface EntryIdentity {
   publicUserId: string
   name: string
   color: string
+  email: string
 }
 
 const isBlank = (html: string) => !html || html === '<p></p>'
 
-export function newEntryId(notebookId: string) {
-  return `entry:${notebookId}:${ulid()}`
-}
-
 // entryUlid is normally client-generated already (a block's stable id in
 // the shared editor doc) — pass it through so the doc's _id matches what
 // the editor is already tracking, rather than minting a second, unrelated id.
+//
+// createdByEmail/updatedByEmail (alongside the existing display fields) are
+// what the per-drain validate_doc_update function checks against userCtx.name
+// (CouchDB's authenticated username, which is the account email) to enforce
+// "only the author can edit/delete their own entry."
 export async function createEntry(
-  notebookId: string,
+  db: PouchDB.Database,
   html: string,
   identity: EntryIdentity,
-  entryUlid: string = ulid()
+  entryUlid: string
 ) {
   const sanitized = sanitizeHtml(html)
   if (isBlank(sanitized)) return null
 
   const now = Date.now()
   const doc = {
-    _id: `entry:${notebookId}:${entryUlid}`,
+    _id: `entry:${entryUlid}`,
     type: 'entry',
-    notebookId,
     content: sanitized,
     createdBy: identity.publicUserId,
     createdByName: identity.name,
     createdByColor: identity.color,
+    createdByEmail: identity.email,
     createdAt: now,
     updatedBy: identity.publicUserId,
     updatedByName: identity.name,
     updatedByColor: identity.color,
+    updatedByEmail: identity.email,
     updatedAt: now,
   }
   await db.put(doc)
@@ -50,7 +51,7 @@ export async function createEntry(
 // top of it, and retry instead of silently dropping the edit.
 const MAX_SAVE_ATTEMPTS = 3
 
-export async function saveEntry(entryId: string, html: string, identity: EntryIdentity) {
+export async function saveEntry(db: PouchDB.Database, entryId: string, html: string, identity: EntryIdentity) {
   const sanitized = sanitizeHtml(html)
 
   for (let attempt = 0; attempt < MAX_SAVE_ATTEMPTS; attempt++) {
@@ -59,6 +60,7 @@ export async function saveEntry(entryId: string, html: string, identity: EntryId
     doc.updatedBy = identity.publicUserId
     doc.updatedByName = identity.name
     doc.updatedByColor = identity.color
+    doc.updatedByEmail = identity.email
     doc.updatedAt = Date.now()
 
     try {
@@ -73,8 +75,7 @@ export async function saveEntry(entryId: string, html: string, identity: EntryId
 // Two clients editing the same entry while offline produces a genuine
 // PouchDB conflict on sync (divergent _rev branches under one _id).
 // Resolve deterministically on every client: last-write-wins by updatedAt.
-// Issue 9 fix: sequential deletion, await all before returning, surface errors.
-export async function resolveConflicts(entryId: string) {
+export async function resolveConflicts(db: PouchDB.Database, entryId: string) {
   const doc: any = await db.get(entryId, { conflicts: true })
   if (!doc._conflicts?.length) return doc
 
@@ -99,7 +100,7 @@ export async function resolveConflicts(entryId: string) {
   return winner
 }
 
-export async function deleteEntry(entryId: string) {
+export async function deleteEntry(db: PouchDB.Database, entryId: string) {
   try {
     const doc = await db.get(entryId)
     await db.remove(doc)

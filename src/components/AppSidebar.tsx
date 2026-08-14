@@ -3,7 +3,6 @@ import { useStore } from '@nanostores/react'
 import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox } from 'lucide-react'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
-import { startSync } from '@/services/sync'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -28,13 +27,12 @@ import RenameDrainDialog from './RenameDrainDialog'
 const FOCUS_RING = 'outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
 interface Drain {
-  id: string
-  _id: string
-  title: string | null
+  dbName: string
+  title: string
   description?: string
   tags?: string[]
   visibility: 'shared' | 'private'
-  unlocked?: boolean
+  role: 'owner' | 'member'
 }
 
 function DrainCard({
@@ -46,13 +44,12 @@ function DrainCard({
 }: {
   drain: Drain
   active: boolean
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-  onCopyLink: (id: string) => void
+  onEdit: (dbName: string) => void
+  onDelete: (dbName: string) => void
+  onCopyLink: (dbName: string) => void
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const shortId = drain.id.replace('notebook:', '')
-  const href = `/drains/${shortId}`
+  const href = `/drains/${drain.dbName}`
 
   return (
     <a
@@ -66,9 +63,7 @@ function DrainCard({
       }`}
     >
       <div className="flex items-start justify-between gap-1.5">
-        <span className="line-clamp-2 text-sm font-medium leading-snug">
-          {drain.unlocked ? drain.title || 'Untitled' : 'Encrypted'}
-        </span>
+        <span className="line-clamp-2 text-sm font-medium leading-snug">{drain.title || 'Untitled'}</span>
         {drain.visibility === 'shared' ? (
           <Globe className="size-3 shrink-0 text-neutral-400 mt-0.5" />
         ) : (
@@ -118,19 +113,23 @@ function DrainCard({
           <MoreHorizontal className="size-3.5 text-neutral-400" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onEdit(drain.id)}>
+          <DropdownMenuItem onClick={() => onEdit(drain.dbName)}>
             <Pencil className="size-3.5" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onCopyLink(drain.id)}>
+          <DropdownMenuItem onClick={() => onCopyLink(drain.dbName)}>
             <Link className="size-3.5" />
             Copy link
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(drain.id)}>
-            <Trash2 className="size-3.5" />
-            Delete
-          </DropdownMenuItem>
+          {drain.role === 'owner' && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => onDelete(drain.dbName)}>
+                <Trash2 className="size-3.5" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </a>
@@ -141,42 +140,41 @@ export default function AppSidebar() {
   const drains = useStore($drains)
   const [loading, setLoading] = useState(true)
   const [editTarget, setEditTarget] = useState<{
-    id: string
+    dbName: string
     title: string
     description?: string
     tags?: string[]
+    visibility: 'shared' | 'private'
+    isOwner: boolean
   } | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
 
   useEffect(() => {
     $identity.set(getStoredIdentityClient())
     populateDrains().finally(() => setLoading(false))
-    // Sidebar is mounted on every page (home included), so this is the
-    // earliest point sync can start — previously it only started once you
-    // opened a specific drain, so first-open showed stale/empty local data.
-    startSync()
   }, [])
 
-  const handleEdit = (drainId: string) => {
-    const drain = $drains.get().find((d: any) => d._id === drainId)
+  const handleEdit = (dbName: string) => {
+    const drain = $drains.get().find((d: any) => d.dbName === dbName)
     if (!drain) return
     setEditTarget({
-      id: drainId,
+      dbName,
       title: drain.title || '',
       description: drain.description,
       tags: drain.tags,
+      visibility: drain.visibility,
+      isOwner: drain.role === 'owner',
     })
   }
 
   const handleDeleteConfirmed = async () => {
     if (!deleteTarget) return
-    await deleteDrain(deleteTarget.id)
+    await deleteDrain(deleteTarget.dbName)
     setDeleteTarget(null)
   }
 
-  const handleCopyLink = (drainId: string) => {
-    const shortId = drainId.replace('notebook:', '')
-    navigator.clipboard.writeText(`${window.location.origin}/drains/${shortId}`)
+  const handleCopyLink = (dbName: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/drains/${dbName}`)
   }
 
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
@@ -215,15 +213,14 @@ export default function AppSidebar() {
             <>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {drains.map((drain: any) => {
-                  const shortId = drain.id.replace('notebook:', '')
-                  const href = `/drains/${shortId}`
+                  const href = `/drains/${drain.dbName}`
                   return (
                     <DrainCard
-                      key={drain.id}
+                      key={drain.dbName}
                       drain={drain}
                       active={currentPath === href}
                       onEdit={handleEdit}
-                      onDelete={(id) => setDeleteTarget({ id, title: drain.title || 'this drain' })}
+                      onDelete={(dbName) => setDeleteTarget({ dbName, title: drain.title || 'this drain' })}
                       onCopyLink={handleCopyLink}
                     />
                   )
@@ -251,10 +248,12 @@ export default function AppSidebar() {
       {/* Edit Dialog */}
       {editTarget && (
         <RenameDrainDialog
-          drainId={editTarget.id}
+          drainId={editTarget.dbName}
           currentTitle={editTarget.title}
           currentDescription={editTarget.description}
           currentTags={editTarget.tags}
+          visibility={editTarget.visibility}
+          isOwner={editTarget.isOwner}
           open={true}
           onOpenChange={(open) => {
             if (!open) setEditTarget(null)

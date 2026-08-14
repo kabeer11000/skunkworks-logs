@@ -1,32 +1,48 @@
-import { db } from './db.js';
+import { getDrainDb } from './db.js';
 import { $syncStatus } from '../stores/sync';
+import { getAuthCredential } from './authSession';
 
-const REMOTE_URL = import.meta.env.VITE_COUCHDB_URL || 'http://admin:password@localhost:5984/main';
+const REMOTE_HOST = (import.meta.env.VITE_COUCHDB_URL || 'http://localhost:5984/main').replace(/\/[^/]*$/, '');
 
-let handler = null;
+// One live sync handler per currently-open drain database, keyed by dbName.
+// $syncStatus reflects whichever drain was most recently active — good
+// enough for the single status pill in the UI; per-drain status isn't
+// surfaced anywhere yet.
+const handlers = new Map();
 
-// Safe to call from multiple places (AppSidebar on every page load, plus
-// SyncIndicator on the drain page) — writes to the shared $syncStatus store
-// instead of a per-caller callback, so every caller sees the same state
-// regardless of who actually started the sync.
-export function startSync() {
-  if (handler) return handler;
-  handler = db.sync(REMOTE_URL, { live: true, retry: true })
+export function startDrainSync(dbName) {
+  if (handlers.has(dbName)) return handlers.get(dbName);
+  const credential = getAuthCredential();
+  if (!credential) return null;
+
+  const handler = getDrainDb(dbName)
+    .sync(`${REMOTE_HOST}/${dbName}`, {
+      live: true,
+      retry: true,
+      auth: { username: credential.email, password: credential.password },
+    })
     .on('paused', (err) => {
       $syncStatus.set(err ? 'error' : 'paused');
     })
     .on('active', () => $syncStatus.set('active'))
-    .on('error', err => {
-      console.error('sync error', err);
+    .on('error', (err) => {
+      console.error('sync error', dbName, err);
       $syncStatus.set('error');
     });
+  handlers.set(dbName, handler);
   return handler;
 }
 
-export function stopSync() {
+export function stopDrainSync(dbName) {
+  const handler = handlers.get(dbName);
   if (handler) {
     handler.cancel();
-    handler = null;
+    handlers.delete(dbName);
   }
+}
+
+export function stopAllSync() {
+  handlers.forEach((h) => h.cancel());
+  handlers.clear();
   $syncStatus.set(null);
 }

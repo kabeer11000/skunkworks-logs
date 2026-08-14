@@ -1,7 +1,7 @@
 ---
 import { NotebookPen } from "lucide-react";
 import PageShell from "@/components/PageShell";
-import Onboarding from "@/components/Onboarding";
+import AuthGate from "@/components/AuthGate";
 import Layout from "../layouts/Layout.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
@@ -24,6 +24,6 @@ const identity = cookie ? cookie.json() : null;
 			</div>
 		</PageShell>
 	) : (
-		<Onboarding client:load />
+		<AuthGate client:load />
 	)}
 </Layout>

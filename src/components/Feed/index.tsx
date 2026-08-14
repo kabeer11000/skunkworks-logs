@@ -5,7 +5,7 @@ import { Placeholder } from '@tiptap/extensions'
 import { DOMSerializer } from '@tiptap/pm/model'
 import { ulid } from 'ulid'
 import { Skeleton } from '@/components/ui/skeleton'
-import { db } from '@/services/db'
+import { getDrainDb } from '@/services/db'
 import { $identity } from '@/services/identity'
 import { loadLatestPage, loadOlderPage } from '@/utils/ulid-pages'
 import { createEntry, saveEntry, deleteEntry, resolveConflicts, type EntryIdentity } from '@/services/entries'
@@ -29,7 +29,7 @@ const SAVE_DEBOUNCE_MS = 500
 // which would otherwise leak one db.changes() listener per navigation. Cancel
 // whatever's currently active before starting a new one, on top of the normal
 // effect cleanup, so a missed cleanup can never leave more than one stale feed.
-let activeEntriesChanges: ReturnType<typeof db.changes> | null = null
+let activeEntriesChanges: ReturnType<ReturnType<typeof getDrainDb>['changes']> | null = null
 let activeCommentsChanges: ReturnType<typeof watchComments> | null = null
 // Varying widths so the loading state reads as text lines, not a uniform bar grid.
 const SKELETON_ENTRY_WIDTHS = ['w-3/4', 'w-1/2', 'w-5/6', 'w-2/3', 'w-full', 'w-1/3']
@@ -59,9 +59,10 @@ function entryToBlockHtml(entry: any, rid: string) {
   return p.outerHTML
 }
 
-export default function Feed({ notebookId }: { notebookId: string }) {
+export default function Feed({ dbName }: { dbName: string }) {
   const identity = $identity.get()
-  const entryPrefix = `entry:${notebookId}:`
+  const db = getDrainDb(dbName)
+  const entryPrefix = 'entry:'
   const rawId = (fullId: string) => fullId.slice(entryPrefix.length)
   const fullId = (rid: string) => `${entryPrefix}${rid}`
 
@@ -176,7 +177,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
         if (html === '<p></p>') return // never persist an empty new block
         saveInFlightRef.current.add(rid)
         ops.push(
-          createEntry(notebookId, html, identity, rid)
+          createEntry(db, html, identity, rid)
             .then((doc) => {
               if (doc) {
                 existsInDbRef.current.add(rid)
@@ -188,7 +189,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       } else {
         saveInFlightRef.current.add(rid)
         ops.push(
-          saveEntry(fullId(rid), html, identity)
+          saveEntry(db, fullId(rid), html, identity)
             .then(() => {
               lastSavedRef.current.set(rid, html)
             })
@@ -200,7 +201,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     for (const rid of existsInDbRef.current) {
       if (!currentIds.has(rid)) {
         ops.push(
-          deleteEntry(fullId(rid)).then(() => {
+          deleteEntry(db, fullId(rid)).then(() => {
             existsInDbRef.current.delete(rid)
             lastSavedRef.current.delete(rid)
             lastAuthorRef.current.delete(rid)
@@ -223,7 +224,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     setSaveState('saved')
     if (saveStateResetRef.current) clearTimeout(saveStateResetRef.current)
     saveStateResetRef.current = setTimeout(() => setSaveState('idle'), 1500)
-  }, [editor, notebookId])
+  }, [editor, db])
 
   const scheduleSave = useCallback(() => {
     setSaveState('saving')
@@ -240,7 +241,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     if (contentInitializedRef.current) return
     let cancelled = false
 
-    Promise.all([loadLatestPage(notebookId, PAGE_SIZE), db.info()]).then(([page, info]) => {
+    Promise.all([loadLatestPage(db, PAGE_SIZE), db.info()]).then(([page, info]) => {
       if (cancelled) return
       contentInitializedRef.current = true
       sinceSeqRef.current = info.update_seq
@@ -264,7 +265,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, notebookId])
+  }, [editor, db])
 
   // Load older pages when the top sentinel scrolls into view, preserving
   // scroll position so the prepend doesn't yank the viewport.
@@ -280,7 +281,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
         loadingOlderRef.current = true
         const prevScrollHeight = scrollEl.scrollHeight
-        const page = await loadOlderPage(notebookId, oldestFullIdRef.current, PAGE_SIZE)
+        const page = await loadOlderPage(db, oldestFullIdRef.current, PAGE_SIZE)
 
         if (page.length > 0) {
           const html = page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
@@ -306,7 +307,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     observer.observe(sentinel)
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, notebookId, initialLoaded])
+  }, [editor, db, initialLoaded])
 
   // Live changes feed — patch just the affected block, never the whole doc.
   // Issue 2 fix: use update_seq captured after initial load so no gap.
@@ -343,7 +344,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           let doc = change.doc
           // Issue 3 fix: await resolveConflicts before proceeding
           if (doc._conflicts?.length) {
-            doc = await resolveConflicts(change.id)
+            doc = await resolveConflicts(db, change.id)
           }
 
           // Issue 4 fix: always update authorship ref — even if content matches
@@ -396,18 +397,17 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       if (activeEntriesChanges === changes) activeEntriesChanges = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, notebookId])
+  }, [editor, db])
 
-  // Comments live in their own docs (comment:<notebookId>:<id>), separate
-  // from entries — load the current set, then keep it live the same way
-  // helpers/drains.ts keeps the drains list live.
+  // Comments live in their own docs (comment:<id>), separate from entries —
+  // load the current set, then keep it live.
   useEffect(() => {
     let cancelled = false
-    loadComments(notebookId).then((initial) => {
+    loadComments(db).then((initial) => {
       if (!cancelled) setComments(initial)
     })
     activeCommentsChanges?.cancel()
-    const changes = watchComments(notebookId, ({ id, deleted, doc }) => {
+    const changes = watchComments(db, ({ id, deleted, doc }) => {
       setComments((prev) => {
         if (deleted) return prev.filter((c) => c._id !== id)
         if (!doc) return prev
@@ -424,7 +424,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       changes.cancel()
       if (activeCommentsChanges === changes) activeCommentsChanges = null
     }
-  }, [notebookId])
+  }, [db])
 
   // Applying/removing the comment mark is a normal doc edit — it rides the
   // existing onUpdate -> scheduleSave -> flushBlocks path, so no separate
@@ -441,9 +441,9 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
       const commentId = ulid()
       editor.chain().setMark('comment', { commentId }).setTextSelection(to).run()
-      createComment(notebookId, entryId, commentId, text, identity)
+      createComment(db, entryId, commentId, text, identity)
     },
-    [editor, notebookId]
+    [editor, db]
   )
 
   const handleDeleteComment = useCallback(
@@ -466,10 +466,10 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           })
           .run()
       }
-      deleteComment(comment._id)
+      deleteComment(db, comment._id)
       setComments((prev) => prev.filter((c) => c._id !== comment._id))
     },
-    [editor]
+    [editor, db]
   )
 
   const handleContainerClick = (e: React.MouseEvent) => {
