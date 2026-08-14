@@ -1,17 +1,5 @@
-import { getAuthCredential } from './authSession'
 import type { DirectoryDrainEntry } from '@/lib/couchdb-admin'
-
-function authHeader() {
-  const cred = getAuthCredential()
-  if (!cred) throw new Error('Not signed in')
-  return 'Basic ' + btoa(`${cred.email}:${cred.password}`)
-}
-
-async function parseErrorOr<T>(res: Response, fallback: string): Promise<T> {
-  if (res.ok) return res.json()
-  const body = await res.json().catch(() => ({}))
-  throw new Error(body.error || fallback)
-}
+import { authHeader, parseErrorOr } from './apiAuth'
 
 export async function fetchDrains(): Promise<DirectoryDrainEntry[]> {
   const res = await fetch('/api/drains', { headers: { Authorization: authHeader() } })

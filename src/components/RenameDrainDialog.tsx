@@ -339,8 +339,9 @@ export default function RenameDrainDialog({
                   <span className="font-medium">Settings → Webhooks → Add webhook</span>. Set{' '}
                   <span className="font-medium">Payload URL</span> to the link below, Content type to{' '}
                   <span className="font-medium">application/json</span>, and select the{' '}
-                  <span className="font-medium">push</span> and{' '}
-                  <span className="font-medium">pull requests</span> events.
+                  <span className="font-medium">push</span>,{' '}
+                  <span className="font-medium">pull requests</span>, and{' '}
+                  <span className="font-medium">issues</span> events.
                 </p>
                 <div className="flex gap-1.5">
                   <Input readOnly value={ingestionUrl} onFocus={(e) => e.target.select()} />

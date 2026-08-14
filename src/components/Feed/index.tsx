@@ -569,7 +569,7 @@ export default function Feed({ dbName }: { dbName: string }) {
         {editor && <EditorToolbar editor={editor} anchorRef={editorColumnRef} />}
         <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-2 pt-16 pb-16">
         <div className="flex gap-4">
-          {editor && <OutlineAside editor={editor} />}
+          {editor && <OutlineAside editor={editor} dbName={dbName} />}
           <div ref={editorColumnRef} className="min-w-0 flex-1">
             {!initialLoaded && (
               <div className="flex flex-col gap-1.5">

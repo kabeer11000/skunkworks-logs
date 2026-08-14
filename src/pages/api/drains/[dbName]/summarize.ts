@@ -1,0 +1,52 @@
+import type { APIRoute } from 'astro'
+import { requireAuth } from '@/lib/requireAuth'
+import { getDirectoryDrains, getEntriesByIds, createSummaryEntry } from '@/lib/couchdb-admin'
+import { chatComplete } from '@/lib/minimax'
+import { escapeHtml, stripHtmlTags } from '@/lib/htmlEscape'
+
+export const prerender = false
+
+export const POST: APIRoute = async ({ request, params }) => {
+  const dbName = params.dbName!
+  const caller = await requireAuth(request)
+  if (!caller) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+  const drains = await getDirectoryDrains(caller.email)
+  if (!drains.some((d) => d.dbName === dbName)) {
+    return new Response(JSON.stringify({ error: 'Not a member of this drain' }), { status: 403 })
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const entryIds = Array.isArray(body.entryIds) ? body.entryIds.filter((id: unknown) => typeof id === 'string') : []
+  if (entryIds.length === 0) {
+    return new Response(JSON.stringify({ error: 'No entries to summarize' }), { status: 400 })
+  }
+
+  const entries = await getEntriesByIds(dbName, entryIds)
+  if (entries.length === 0) {
+    return new Response(JSON.stringify({ error: 'None of those entries exist' }), { status: 404 })
+  }
+
+  entries.sort((a: any, b: any) => a.createdAt - b.createdAt)
+  const transcript = entries
+    .map((e: any) => `- ${stripHtmlTags(e.content)}`)
+    .join('\n')
+
+  // LLM output is treated as untrusted the same way GitHub payloads are
+  // (api/ingest/[token].ts) — escaped before it becomes stored HTML, since
+  // the entries being summarized could themselves contain adversarial text
+  // aimed at getting the model to emit markup.
+  const raw = await chatComplete([
+    {
+      role: 'system',
+      content:
+        'Summarize the following engineering log entries into a short, plain-prose paragraph (2-4 sentences). No headings, no bullet points, no meta-commentary about being an AI — just the summary itself.',
+    },
+    { role: 'user', content: transcript },
+  ])
+
+  const summaryHtml = `<p>${escapeHtml(raw.trim())}</p>`
+  await createSummaryEntry(dbName, summaryHtml)
+
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+}

@@ -1,23 +1,8 @@
 import type { APIRoute } from 'astro'
 import { getDrainByIngestionToken, createIngestedEntry, recordIngestionEvent } from '@/lib/couchdb-admin'
+import { escapeHtml } from '@/lib/htmlEscape'
 
 export const prerender = false
-
-// Commit messages/PR titles are attacker-controllable text from GitHub —
-// services/sanitize.js's DOMPurify-based sanitizer needs a browser `window`
-// (no jsdom installed here), so it can't run in this server route. The HTML
-// skeleton itself is fixed and only these plain-text fields get
-// interpolated into it, so escaping them is sufficient — this isn't
-// sanitizing arbitrary rich HTML, just neutralizing text going into
-// attribute/text positions in HTML this handler otherwise fully controls.
-function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 // Only allow http(s) URLs through into href attributes — GitHub always
 // sends real https:// URLs, but there's no reason to trust that blindly
@@ -70,6 +55,16 @@ export const POST: APIRoute = async ({ request, params }) => {
       const title = escapeHtml(pr.title ?? '')
       lines.push(
         `<p>${verb} PR <a href="${safeUrl(pr.html_url)}">#${Number(pr.number) || 0}</a> in <strong>${repo}</strong>: ${title}</p>`
+      )
+    }
+  } else if (event === 'issues') {
+    const issue = body.issue
+    const actions: Record<string, string> = { opened: 'Opened', closed: 'Closed', reopened: 'Reopened' }
+    const verb = actions[body.action]
+    if (issue && verb) {
+      const title = escapeHtml(issue.title ?? '')
+      lines.push(
+        `<p>${verb} issue <a href="${safeUrl(issue.html_url)}">#${Number(issue.number) || 0}</a> in <strong>${repo}</strong>: ${title}</p>`
       )
     }
   }

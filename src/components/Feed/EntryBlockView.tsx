@@ -1,11 +1,13 @@
 import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react'
-import { History, GitCommit } from 'lucide-react'
+import { History, GitCommit, Sparkles } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { relativeTime, safeName, safeColor } from './utils'
 
 export function EntryBlockView({ node }: NodeViewProps) {
   const { entryId, authorColor, authorName, updatedAt, createdAt, createdByName, source } = node.attrs
   const isIngested = source === 'github'
+  const isSummary = source === 'ai-summary'
+  const SourceIcon = isSummary ? Sparkles : GitCommit
 
   const color = safeColor(authorColor)
   const author = safeName(authorName)
@@ -57,13 +59,13 @@ export function EntryBlockView({ node }: NodeViewProps) {
             />
           }
         >
-          {isIngested ? <GitCommit className="size-2.5" /> : <History className="size-2.5" />}
+          {isIngested || isSummary ? <SourceIcon className="size-2.5" /> : <History className="size-2.5" />}
           {creator} · {updatedAt ? relativeTime(Number(updatedAt)) : ''}
         </PopoverTrigger>
         <PopoverContent align="end" className="w-64 text-sm" contentEditable={false}>
           <div className="flex items-center gap-2 font-medium">
-            {isIngested ? (
-              <GitCommit className="size-3 shrink-0" />
+            {isIngested || isSummary ? (
+              <SourceIcon className="size-3 shrink-0" />
             ) : (
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
             )}

@@ -300,7 +300,34 @@ export async function recordIngestionEvent(dbName: string) {
   await putAdminDoc(dbName, { ...notebook, lastIngestedAt: Date.now() })
 }
 
-const GITHUB_AUTHOR = {
+// Shape shared by every non-human-authored entry (GitHub ingestion, AI
+// summaries) — a fixed identity instead of a real user's, so EntryBlockView
+// can render a distinct badge via the `source` field (see BlockParagraph.ts).
+interface BotAuthor {
+  createdBy: string
+  createdByName: string
+  createdByColor: string
+  createdByEmail: string
+  source: string
+}
+
+async function putBotEntry(dbName: string, content: string, author: BotAuthor, createdAt: number) {
+  const doc = {
+    _id: `entry:${ulid()}`,
+    type: 'entry',
+    content,
+    ...author,
+    updatedBy: author.createdBy,
+    updatedByName: author.createdByName,
+    updatedByColor: author.createdByColor,
+    updatedByEmail: author.createdByEmail,
+    createdAt,
+    updatedAt: createdAt,
+  }
+  await putAdminDoc(dbName, doc)
+}
+
+const GITHUB_AUTHOR: BotAuthor = {
   createdBy: 'github-ingestion',
   createdByName: 'GitHub',
   createdByColor: '#6e5494',
@@ -309,19 +336,29 @@ const GITHUB_AUTHOR = {
 }
 
 export async function createIngestedEntry(dbName: string, content: string, createdAt: number) {
-  const doc = {
-    _id: `entry:${ulid()}`,
-    type: 'entry',
-    content,
-    ...GITHUB_AUTHOR,
-    updatedBy: GITHUB_AUTHOR.createdBy,
-    updatedByName: GITHUB_AUTHOR.createdByName,
-    updatedByColor: GITHUB_AUTHOR.createdByColor,
-    updatedByEmail: GITHUB_AUTHOR.createdByEmail,
-    createdAt,
-    updatedAt: createdAt,
-  }
-  await putAdminDoc(dbName, doc)
+  await putBotEntry(dbName, content, GITHUB_AUTHOR, createdAt)
+}
+
+const AI_SUMMARY_AUTHOR: BotAuthor = {
+  createdBy: 'ai-summary',
+  createdByName: 'AI Summary',
+  createdByColor: '#7c3aed',
+  createdByEmail: 'ai-summary@skunkworks.local',
+  source: 'ai-summary',
+}
+
+export async function createSummaryEntry(dbName: string, content: string) {
+  await putBotEntry(dbName, content, AI_SUMMARY_AUTHOR, Date.now())
+}
+
+export async function getEntriesByIds(dbName: string, ids: string[]) {
+  const res = await adminFetch(`/${dbName}/_all_docs?include_docs=true`, {
+    method: 'POST',
+    body: JSON.stringify({ keys: ids }),
+  })
+  if (!res.ok) throw new Error(`Failed to read entries for ${dbName} (${res.status})`)
+  const data = await res.json()
+  return data.rows.map((r: any) => r.doc).filter(Boolean)
 }
 
 export async function getPublicEntries(dbName: string) {

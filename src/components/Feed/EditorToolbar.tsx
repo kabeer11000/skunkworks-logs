@@ -1,6 +1,19 @@
 import { useEffect, useState, type RefObject } from 'react'
 import type { Editor } from '@tiptap/react'
-import { Bold, Italic, Underline, Strikethrough, Code, Eraser } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Code, Eraser, Wand2 } from 'lucide-react'
+import { cleanupText } from '@/services/aiApi'
+
+// Finds the top-level paragraph node the cursor is currently inside — every
+// top-level node in this doc is a block/entry (see BlockParagraph.ts), so
+// there's always exactly one match.
+function currentBlock(editor: Editor): { pos: number; node: any } | null {
+  const { from } = editor.state.selection
+  let found: { pos: number; node: any } | null = null
+  editor.state.doc.forEach((node, pos) => {
+    if (from >= pos && from <= pos + node.nodeSize) found = { pos, node }
+  })
+  return found
+}
 
 const BUTTONS: { mark: string; icon: typeof Bold; label: string; run: (editor: Editor) => void }[] = [
   { mark: 'bold', icon: Bold, label: 'Bold', run: (e) => e.chain().focus().toggleBold().run() },
@@ -48,6 +61,28 @@ export function EditorToolbar({
     }
   }, [anchorRef])
 
+  const [cleaning, setCleaning] = useState(false)
+
+  const handleCleanup = async () => {
+    const found = currentBlock(editor)
+    if (!found) return
+    const { pos, node } = found
+    const text = node.textContent.trim()
+    if (!text) return
+
+    setCleaning(true)
+    try {
+      const { text: cleaned } = await cleanupText(text)
+      const from = pos + 1
+      const to = pos + node.nodeSize - 1
+      editor.chain().focus().insertContentAt({ from, to }, cleaned).run()
+    } catch {
+      // Best-effort — leave the original text untouched on failure.
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   if (center === null) return null
 
   return (
@@ -78,6 +113,17 @@ export function EditorToolbar({
         className="flex size-7 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Eraser className="size-3.5" />
+      </button>
+      <div className="mx-1 h-4 w-px bg-border" />
+      <button
+        type="button"
+        title="Clean up with AI"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleCleanup}
+        disabled={cleaning}
+        className="flex size-7 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Wand2 className={`size-3.5 ${cleaning ? 'animate-pulse' : ''}`} />
       </button>
     </div>
   )
