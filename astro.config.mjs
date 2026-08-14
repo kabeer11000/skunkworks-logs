@@ -11,7 +11,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   integrations: [react()],
   adapter: vercel(),
-  output: "static",
+  output: "server",
   vite: {
     define: {
       global: 'globalThis', // Fixes PouchDB/EventEmitter global variables issues in Vite
