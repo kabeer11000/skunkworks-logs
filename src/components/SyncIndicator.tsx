@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useStore } from "@nanostores/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { startSync } from "@/services/sync";
+import { $syncStatus } from "@/stores/sync";
 
 type Status = "connecting" | "active" | "paused" | "error" | "offline";
 
@@ -13,26 +15,28 @@ const STATUS_META: Record<Status, { dot: string; label: string; description: str
 };
 
 export default function SyncIndicator() {
-	const [status, setStatus] = useState<Status>("connecting");
+	// Sync itself may already be running by the time this mounts (AppSidebar
+	// kicks it off on every page load) — startSync() is idempotent, this just
+	// makes sure it's running even if AppSidebar somehow isn't mounted.
+	const raw = useStore($syncStatus);
 	const [lastChangedAt, setLastChangedAt] = useState<Date | null>(null);
+	const [timedOut, setTimedOut] = useState(false);
 
 	useEffect(() => {
-		let timedOut = false;
-		const timeout = setTimeout(() => {
-			timedOut = true;
-			setStatus("offline");
-		}, 5000);
-
-		startSync((s) => {
-			if (timedOut) return;
-			clearTimeout(timeout);
-			setStatus(s as Status);
-			setLastChangedAt(new Date());
-		});
-
-		return () => clearTimeout(timeout);
+		startSync();
 	}, []);
 
+	useEffect(() => {
+		if (raw) {
+			setLastChangedAt(new Date());
+			setTimedOut(false);
+			return;
+		}
+		const timeout = setTimeout(() => setTimedOut(true), 5000);
+		return () => clearTimeout(timeout);
+	}, [raw]);
+
+	const status: Status = raw ?? (timedOut ? "offline" : "connecting");
 	const meta = STATUS_META[status];
 
 	return (

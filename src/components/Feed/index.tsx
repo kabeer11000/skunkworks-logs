@@ -18,10 +18,19 @@ import { CommentMark } from './CommentMark'
 import { CommentsAside } from './CommentsAside'
 import { OutlineAside } from './OutlineAside'
 import { AddCommentPopover } from './AddCommentPopover'
+import { EditorToolbar } from './EditorToolbar'
 import { safeName, safeColor } from './utils'
 
 const PAGE_SIZE = 50
 const SAVE_DEBOUNCE_MS = 500
+
+// Astro's ClientRouter can swap client:only islands without reliably running
+// React's unmount cleanup (same class of bug already hit in helpers/drains.ts),
+// which would otherwise leak one db.changes() listener per navigation. Cancel
+// whatever's currently active before starting a new one, on top of the normal
+// effect cleanup, so a missed cleanup can never leave more than one stale feed.
+let activeEntriesChanges: ReturnType<typeof db.changes> | null = null
+let activeCommentsChanges: ReturnType<typeof watchComments> | null = null
 // Varying widths so the loading state reads as text lines, not a uniform bar grid.
 const SKELETON_ENTRY_WIDTHS = ['w-3/4', 'w-1/2', 'w-5/6', 'w-2/3', 'w-full', 'w-1/3']
 
@@ -58,6 +67,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const editorColumnRef = useRef<HTMLDivElement>(null)
   const identityRef = useRef<EntryIdentity>(identity)
   const oldestFullIdRef = useRef<string | null>(null)
   const hasMoreRef = useRef(true)
@@ -304,6 +314,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   // Issue 4 fix: always refresh authorship attrs, not just when content differs.
   useEffect(() => {
     if (!editor) return
+    activeEntriesChanges?.cancel()
     const since = sinceSeqRef.current ?? 'now'
     const changes = db
       .changes({ since, live: true, include_docs: true, conflicts: true })
@@ -379,7 +390,11 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           changePendingRef.current.delete(rid)
         }
       })
-    return () => changes.cancel()
+    activeEntriesChanges = changes
+    return () => {
+      changes.cancel()
+      if (activeEntriesChanges === changes) activeEntriesChanges = null
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, notebookId])
 
@@ -391,6 +406,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     loadComments(notebookId).then((initial) => {
       if (!cancelled) setComments(initial)
     })
+    activeCommentsChanges?.cancel()
     const changes = watchComments(notebookId, ({ id, deleted, doc }) => {
       setComments((prev) => {
         if (deleted) return prev.filter((c) => c._id !== id)
@@ -402,9 +418,11 @@ export default function Feed({ notebookId }: { notebookId: string }) {
         return next
       })
     })
+    activeCommentsChanges = changes
     return () => {
       cancelled = true
       changes.cancel()
+      if (activeCommentsChanges === changes) activeCommentsChanges = null
     }
   }, [notebookId])
 
@@ -478,10 +496,11 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8"
           style={{ background: 'linear-gradient(to top, white, transparent)' }}
         />
-        <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-4 pt-8 pb-4">
+        {editor && <EditorToolbar editor={editor} anchorRef={editorColumnRef} />}
+        <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-4 pt-8 pb-16">
         <div className="flex gap-6">
           {editor && <OutlineAside editor={editor} />}
-          <div className="min-w-0 flex-1">
+          <div ref={editorColumnRef} className="min-w-0 flex-1">
             {!initialLoaded && (
               <div className="flex flex-col gap-1.5">
                 {SKELETON_ENTRY_WIDTHS.map((width, i) => (

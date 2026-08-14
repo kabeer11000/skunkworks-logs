@@ -4,12 +4,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { $identity, deriveIdentity, saveIdentityClient } from '@/services/identity'
 import { db } from '@/services/db'
+import { createGettingStartedDrain } from '@/helpers/drains'
 
 export default function Onboarding() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
+  // There's no password/verification here — email alone maps to an identity,
+  // so anyone typing an existing email would silently start acting as that
+  // person. This can't be a hard block (the same person legitimately signing
+  // in from a new device looks identical to that), so it's a warn-and-confirm
+  // step instead: pause once, show whose name is already on record, and only
+  // proceed if they explicitly continue.
+  const [collision, setCollision] = useState<{ name: string } | null>(null)
 
   const validate = () => {
     const errs: { name?: string; email?: string } = {}
@@ -20,8 +28,8 @@ export default function Onboarding() {
     return errs
   }
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
@@ -31,18 +39,33 @@ export default function Onboarding() {
     setIsLoading(true)
 
     const identity = await deriveIdentity(email, name)
+    const existing: any = await db.get(`profile:${identity.publicUserId}`).catch(() => null)
+
+    if (existing && !collision) {
+      setCollision({ name: existing.name })
+      setIsLoading(false)
+      return
+    }
+
     saveIdentityClient(identity)
     $identity.set(identity)
 
     try {
-      await db.put({
-        _id: `profile:${identity.publicUserId}`,
-        type: 'profile',
-        publicUserId: identity.publicUserId,
-        name: identity.name,
-        color: identity.color,
-        createdAt: Date.now(),
-      })
+      if (!existing) {
+        await db.put({
+          _id: `profile:${identity.publicUserId}`,
+          type: 'profile',
+          publicUserId: identity.publicUserId,
+          name: identity.name,
+          color: identity.color,
+          createdAt: Date.now(),
+        })
+        try {
+          await createGettingStartedDrain(identity)
+        } catch {
+          // Non-fatal — worst case a new account just has an empty sidebar.
+        }
+      }
       window.location.href = '/'
     } catch (err: any) {
       if (err?.status !== 409) throw err
@@ -102,7 +125,24 @@ export default function Onboarding() {
             <p className="mt-1 text-sm text-muted-foreground">
               Enter your name and email to get started.
             </p>
-            <form onSubmit={submit} className="mt-8 space-y-4">
+            {collision && (
+              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                <p className="font-medium text-amber-900">This email is already registered</p>
+                <p className="mt-1 text-xs text-amber-800">
+                  It's on record as <strong>{collision.name}</strong>. If that's you continuing on a new
+                  device, go ahead. If not, use a different email.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setCollision(null)}>
+                    Use a different email
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => submit()} disabled={isLoading}>
+                    {isLoading ? 'Continuing…' : `Continue as ${collision.name}`}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <form onSubmit={submit} className={`mt-8 space-y-4 ${collision ? 'hidden' : ''}`}>
               <div className="space-y-1.5">
                 <Label htmlFor="userName">Full name</Label>
                 <Input

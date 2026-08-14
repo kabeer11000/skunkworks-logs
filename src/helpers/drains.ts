@@ -1,6 +1,8 @@
 import { atom } from 'nanostores';
+import { ulid } from 'ulid';
 import { db } from '@/services/db';
-import { getVaultKey } from '@/services/vault';
+import { getVaultKey, setVaultKey } from '@/services/vault';
+import { createEntry, type EntryIdentity } from '@/services/entries';
 
 export const $drains = atom<any[]>([]); // Initialize as an empty array instead of null
 
@@ -118,4 +120,42 @@ export async function updateDrainMeta(id: string, title: string, description?: s
     if (description !== undefined) doc.description = description;
     if (tags !== undefined) doc.tags = tags;
     await db.put(doc);
+}
+
+const GETTING_STARTED_LINES = [
+    '<p>Welcome to SkunkWorks Logs — this is your own private drain, just for you.</p>',
+    '<p>Click anywhere below and start typing. Every line is its own entry and <strong>autosaves</strong> as you go — no save button.</p>',
+    '<p>Select some text and a "Comment" button will appear — leave a note on it, like Google Docs.</p>',
+    '<p>Right-click a drain in the sidebar (or use the <strong>…</strong> button) to rename it, copy its link, or delete it.</p>',
+    '<p>This drain is private: encrypted with a key that only lives on this device. Create a shared drain from the sidebar for anything you want other people to read.</p>',
+]
+
+// Called once at signup (see Onboarding.tsx) so a brand-new account isn't
+// just an empty sidebar. Silently unrecoverable if local storage is ever
+// cleared, same as any other private drain — acceptable here since it's
+// throwaway instructional content, not user data, so we skip NewDrainDialog's
+// "back up this key" step.
+export async function createGettingStartedDrain(identity: EntryIdentity) {
+    const id = `notebook:${ulid()}`
+    const { generateNotebookKey, importNotebookKey, encryptString } = await import('@/services/crypto.js')
+    const key = await generateNotebookKey()
+    const cryptoKey = await importNotebookKey(key)
+    const titleCipher = await encryptString(cryptoKey, 'Getting started')
+
+    await db.put({
+        _id: id,
+        type: 'notebook',
+        visibility: 'private',
+        title: null,
+        titleCipher,
+        createdBy: identity.publicUserId,
+        createdAt: Date.now(),
+    })
+    setVaultKey(id, key)
+
+    for (const html of GETTING_STARTED_LINES) {
+        await createEntry(id, html, identity, ulid())
+    }
+
+    return id
 }

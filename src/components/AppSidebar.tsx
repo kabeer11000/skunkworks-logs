@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox } from 'lucide-react'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
+import { startSync } from '@/services/sync'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -150,6 +151,10 @@ export default function AppSidebar() {
   useEffect(() => {
     $identity.set(getStoredIdentityClient())
     populateDrains().finally(() => setLoading(false))
+    // Sidebar is mounted on every page (home included), so this is the
+    // earliest point sync can start — previously it only started once you
+    // opened a specific drain, so first-open showed stale/empty local data.
+    startSync()
   }, [])
 
   const handleEdit = (drainId: string) => {
@@ -180,12 +185,17 @@ export default function AppSidebar() {
     <>
       <aside className="flex h-full w-[30%] flex-col rounded-xl bg-background">
         {/* Header */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-          <a href="/" className={`flex items-center gap-2 rounded-md ${FOCUS_RING}`}>
-            <img src="/logo/skunkworks-transparent.png" className="h-7 w-7" alt="" />
-            <span className="text-sm font-medium">SkunkWorks / Logs</span>
+        <div className="relative flex h-14 shrink-0 items-center border-b px-4">
+          <img src="/logo/skunkworks-transparent.png" className="h-6 w-6" alt="" />
+          <a
+            href="/"
+            className={`absolute left-1/2 -translate-x-1/2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-neutral-200 hover:bg-secondary ${FOCUS_RING}`}
+          >
+            skunkworks/logs
           </a>
-          <NewDrainDialog />
+          <div className="ml-auto">
+            <NewDrainDialog />
+          </div>
         </div>
 
         {/* Drains */}
@@ -220,7 +230,18 @@ export default function AppSidebar() {
                 })}
               </div>
               {drains.length === 0 && (
-                <p className="mt-4 text-center text-xs text-muted-foreground">No drains yet</p>
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-dashed border-neutral-200 px-4 py-8 text-center">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
+                    <Inbox className="size-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">No drains yet</p>
+                  <p className="max-w-[180px] text-xs text-muted-foreground">
+                    Create a drain to start logging your engineering work.
+                  </p>
+                  <div className="mt-2">
+                    <NewDrainDialog />
+                  </div>
+                </div>
               )}
             </>
           )}
