@@ -195,6 +195,13 @@
 /* Author/history details are a real Popover now (EntryBlockView.tsx),
    triggered by a small hover-revealed button rendered inside the block. */
 
+/* Comment highlight (CommentMark.ts) — the range a CommentCard is anchored to */
+.tiptap mark[data-comment-id] {
+    background: oklch(0.9 0.11 95 / 0.6);
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px oklch(0.9 0.11 95 / 0.6);
+}
+
 /* ProseMirror placeholder — dashed target so an empty log reads as clickable */
 .tiptap p.is-empty:only-child {
     border: 1px dashed oklch(0.85 0 0);

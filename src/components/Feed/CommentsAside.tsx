@@ -1,0 +1,86 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Editor } from '@tiptap/react'
+import { CommentCard } from './CommentCard'
+import type { CommentDoc } from '@/services/comments'
+
+const GAP = 8
+// ponytail: assumed height for a card whose real height hasn't been
+// measured yet (first render pass) — a brief, self-correcting approximation,
+// not a permanent cap; real heights take over once CommentCard reports them.
+const FALLBACK_HEIGHT = 80
+
+export function CommentsAside({
+  editor,
+  comments,
+  onDelete,
+}: {
+  editor: Editor | null
+  comments: CommentDoc[]
+  onDelete: (comment: CommentDoc) => void
+}) {
+  const asideRef = useRef<HTMLDivElement>(null)
+  const [positions, setPositions] = useState<Map<string, number>>(new Map())
+  const [heights, setHeights] = useState<Map<string, number>>(new Map())
+
+  const reportHeight = useCallback((commentId: string, height: number) => {
+    setHeights((prev) => (prev.get(commentId) === height ? prev : new Map(prev).set(commentId, height)))
+  }, [])
+
+  useEffect(() => {
+    if (!editor) return
+
+    const recompute = () => {
+      const asideEl = asideRef.current
+      if (!asideEl) return
+      const asideTop = asideEl.getBoundingClientRect().top
+      const editorDom = editor.view.dom
+
+      const anchored = comments
+        .map((comment) => {
+          const markEl = editorDom.querySelector(`mark[data-comment-id="${comment.commentId}"]`)
+          if (!markEl) return null
+          return { comment, naturalTop: markEl.getBoundingClientRect().top - asideTop }
+        })
+        .filter((r): r is { comment: CommentDoc; naturalTop: number } => r !== null)
+        .sort((a, b) => a.naturalTop - b.naturalTop)
+
+      const next = new Map<string, number>()
+      let cursor = 0
+      for (const { comment, naturalTop } of anchored) {
+        const top = Math.max(naturalTop, cursor)
+        next.set(comment.commentId, top)
+        cursor = top + (heights.get(comment.commentId) ?? FALLBACK_HEIGHT) + GAP
+      }
+      setPositions(next)
+    }
+
+    recompute()
+    editor.on('update', recompute)
+    const ro = new ResizeObserver(recompute)
+    ro.observe(editor.view.dom)
+    window.addEventListener('resize', recompute)
+    return () => {
+      editor.off('update', recompute)
+      ro.disconnect()
+      window.removeEventListener('resize', recompute)
+    }
+  }, [editor, comments, heights])
+
+  return (
+    <div ref={asideRef} className="relative w-64 shrink-0">
+      {comments.map((comment) => {
+        const top = positions.get(comment.commentId)
+        if (top === undefined) return null
+        return (
+          <CommentCard
+            key={comment._id}
+            comment={comment}
+            top={top}
+            onDelete={onDelete}
+            onMeasure={reportHeight}
+          />
+        )
+      })}
+    </div>
+  )
+}

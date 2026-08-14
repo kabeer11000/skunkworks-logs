@@ -3,15 +3,20 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
 import { DOMSerializer } from '@tiptap/pm/model'
+import { ulid } from 'ulid'
 import { Skeleton } from '@/components/ui/skeleton'
 import { db } from '@/services/db'
 import { $identity } from '@/services/identity'
 import { loadLatestPage, loadOlderPage } from '@/utils/ulid-pages'
 import { createEntry, saveEntry, deleteEntry, resolveConflicts, type EntryIdentity } from '@/services/entries'
+import { loadComments, watchComments, createComment, deleteComment, type CommentDoc } from '@/services/comments'
 // @ts-ignore - plain JS module
 import { sanitizeHtml } from '@/services/sanitize'
 import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
+import { CommentMark } from './CommentMark'
+import { CommentsAside } from './CommentsAside'
+import { AddCommentPopover } from './AddCommentPopover'
 import { safeName, safeColor } from './utils'
 
 const PAGE_SIZE = 50
@@ -62,6 +67,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   // legitimate trigger and pagination would never fire again.
   const [initialLoaded, setInitialLoaded] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [comments, setComments] = useState<CommentDoc[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStateResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -104,6 +110,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
         horizontalRule: false,
       }),
       BlockParagraph,
+      CommentMark,
       Placeholder.configure({ placeholder: 'Click to start typing, all your changes autosave…' }),
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),
     ],
@@ -370,6 +377,77 @@ export default function Feed({ notebookId }: { notebookId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, notebookId])
 
+  // Comments live in their own docs (comment:<notebookId>:<id>), separate
+  // from entries — load the current set, then keep it live the same way
+  // helpers/drains.ts keeps the drains list live.
+  useEffect(() => {
+    let cancelled = false
+    loadComments(notebookId).then((initial) => {
+      if (!cancelled) setComments(initial)
+    })
+    const changes = watchComments(notebookId, ({ id, deleted, doc }) => {
+      setComments((prev) => {
+        if (deleted) return prev.filter((c) => c._id !== id)
+        if (!doc) return prev
+        const idx = prev.findIndex((c) => c._id === id)
+        if (idx === -1) return [...prev, doc]
+        const next = [...prev]
+        next[idx] = doc
+        return next
+      })
+    })
+    return () => {
+      cancelled = true
+      changes.cancel()
+    }
+  }, [notebookId])
+
+  // Applying/removing the comment mark is a normal doc edit — it rides the
+  // existing onUpdate -> scheduleSave -> flushBlocks path, so no separate
+  // save call is needed here or in handleDeleteComment below.
+  const handleAddComment = useCallback(
+    (text: string) => {
+      if (!editor) return
+      const identity = identityRef.current
+      if (!identity) return
+      const { from, to } = editor.state.selection
+      if (from === to) return
+      const entryId = editor.state.doc.resolve(from).parent.attrs.entryId
+      if (!entryId) return
+
+      const commentId = ulid()
+      editor.chain().setMark('comment', { commentId }).setTextSelection(to).run()
+      createComment(notebookId, entryId, commentId, text, identity)
+    },
+    [editor, notebookId]
+  )
+
+  const handleDeleteComment = useCallback(
+    (comment: CommentDoc) => {
+      if (!editor) return
+      const markType = editor.schema.marks.comment
+      const ranges: { from: number; to: number }[] = []
+      editor.state.doc.descendants((node: any, pos: number) => {
+        if (!node.isText) return
+        if (node.marks.some((m: any) => m.type.name === 'comment' && m.attrs.commentId === comment.commentId)) {
+          ranges.push({ from: pos, to: pos + node.nodeSize })
+        }
+      })
+      if (ranges.length) {
+        editor
+          .chain()
+          .command(({ tr }: any) => {
+            ranges.forEach(({ from, to }) => tr.removeMark(from, to, markType))
+            return true
+          })
+          .run()
+      }
+      deleteComment(comment._id)
+      setComments((prev) => prev.filter((c) => c._id !== comment._id))
+    },
+    [editor]
+  )
+
   const handleContainerClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) editor?.chain().focus('end').run()
   }
@@ -393,11 +471,17 @@ export default function Feed({ notebookId }: { notebookId: string }) {
             ))}
           </div>
         )}
-        <div ref={sentinelRef} />
-        <div className={initialLoaded ? 'min-h-full' : 'hidden'} onClick={handleContainerClick}>
-          <EditorContent editor={editor} />
+        <div className="flex gap-6">
+          <div className="min-w-0 flex-1">
+            <div ref={sentinelRef} />
+            <div className={initialLoaded ? 'min-h-full' : 'hidden'} onClick={handleContainerClick}>
+              <EditorContent editor={editor} />
+            </div>
+          </div>
+          {editor && <CommentsAside editor={editor} comments={comments} onDelete={handleDeleteComment} />}
         </div>
       </div>
+      {editor && <AddCommentPopover editor={editor} onSubmit={handleAddComment} />}
     </div>
   )
 }

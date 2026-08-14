@@ -19,12 +19,18 @@ export function EntryBlockView({ node }: NodeViewProps) {
       style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, white)` }}
     >
       <Popover>
+        {/* Sits above the padding box entirely (-top-6, clear of the text's
+            own top padding) so it never overlaps the actual text glyphs —
+            a pill sitting -top-2.5 (inside the box) previously intercepted
+            the mousedown/mouseup of a text-selection drag ending near that
+            corner. Safe to keep pointer-events on even while hidden now,
+            since there's nothing selectable in the gap above the card. */}
         <PopoverTrigger
           render={
             <button
               type="button"
               contentEditable={false}
-              className="absolute -top-2.5 right-2 flex items-center gap-1 rounded-full border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground opacity-0 shadow-sm outline-none transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="absolute -top-6 right-2 flex items-center gap-1 rounded-full border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground opacity-0 shadow-sm outline-none transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           }
         >
@@ -39,14 +45,14 @@ export function EntryBlockView({ node }: NodeViewProps) {
           <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
             {createdAt && (
               <p>
-                Created by {creator}
+                Created by {creator} · {relativeTime(Number(createdAt))}
                 <br />
                 {new Date(Number(createdAt)).toLocaleString()}
               </p>
             )}
             {wasEdited && (
               <p>
-                Last edited by {author}
+                Last edited by {author} · {relativeTime(Number(updatedAt))}
                 <br />
                 {new Date(Number(updatedAt)).toLocaleString()}
               </p>
