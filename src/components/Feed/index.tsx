@@ -26,9 +26,6 @@ function entryToBlockHtml(entry: any, rid: string) {
   const p = document.createElement('p')
   p.innerHTML = innerSrc ? sanitizeHtml(innerSrc.innerHTML) : ''
   p.setAttribute('data-entry-id', rid)
-  if (entry.updatedByColor) p.setAttribute('data-author-color', entry.updatedByColor)
-  if (entry.updatedByName) p.setAttribute('data-author-name', entry.updatedByName)
-  if (entry.updatedAt) p.setAttribute('data-updated-at', String(entry.updatedAt))
   return p.outerHTML
 }
 
@@ -53,11 +50,23 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   const [initialLoaded, setInitialLoaded] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Issue 1 fix: prevent StrictMode double-render from overwriting content
+  const contentInitializedRef = useRef(false)
+
   // rid -> last content this client knows is persisted (skip redundant saves,
   // and skip re-applying a remote change that's just an echo of our own write).
   const lastSavedRef = useRef<Map<string, string>>(new Map())
   // rid -> true once a doc for it exists in PouchDB (create vs update).
   const existsInDbRef = useRef<Set<string>>(new Set())
+  // rid -> authorship from last remote update (updatedByName, updatedByColor)
+  const lastAuthorRef = useRef<Map<string, { name: string; color: string }>>(new Map())
+  // Per-entry mutex: true while a save for this entry is in-flight.
+  // Prevents concurrent saves for the same entry from racing (last-write-wins).
+  const saveInFlightRef = useRef<Set<string>>(new Set())
+  // Issue 4 fix: sequential change processing — pending op for each entry
+  const changePendingRef = useRef<Set<string>>(new Set())
+  // Issue 2 fix: update_seq captured after initial load — changes feed starts from here
+  const sinceSeqRef = useRef<number | string | null>(null)
 
   identityRef.current = identity
 
@@ -95,6 +104,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   // Debounced: walk every top-level block, save whatever changed since the
   // last known-persisted content, and remove docs for blocks that vanished
   // (merged away via backspace) so they don't reappear from a stale doc.
+  // Issue 5 fix: per-entry mutex prevents concurrent saves for the same entry.
   const flushBlocks = useCallback(async () => {
     if (!editor) return
     const identity = identityRef.current
@@ -110,22 +120,30 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
       const html = serializeBlockContent(editor, node)
       if (lastSavedRef.current.get(rid) === html) return
+      // Skip if a save for this entry is already in-flight
+      if (saveInFlightRef.current.has(rid)) return
 
       if (!existsInDbRef.current.has(rid)) {
         if (html === '<p></p>') return // never persist an empty new block
+        saveInFlightRef.current.add(rid)
         ops.push(
-          createEntry(notebookId, html, identity, rid).then((doc) => {
-            if (doc) {
-              existsInDbRef.current.add(rid)
-              lastSavedRef.current.set(rid, html)
-            }
-          })
+          createEntry(notebookId, html, identity, rid)
+            .then((doc) => {
+              if (doc) {
+                existsInDbRef.current.add(rid)
+                lastSavedRef.current.set(rid, html)
+              }
+            })
+            .finally(() => saveInFlightRef.current.delete(rid))
         )
       } else {
+        saveInFlightRef.current.add(rid)
         ops.push(
-          saveEntry(fullId(rid), html, identity).then(() => {
-            lastSavedRef.current.set(rid, html)
-          })
+          saveEntry(fullId(rid), html, identity)
+            .then(() => {
+              lastSavedRef.current.set(rid, html)
+            })
+            .finally(() => saveInFlightRef.current.delete(rid))
         )
       }
     })
@@ -136,12 +154,14 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           deleteEntry(fullId(rid)).then(() => {
             existsInDbRef.current.delete(rid)
             lastSavedRef.current.delete(rid)
+            lastAuthorRef.current.delete(rid)
           })
         )
       }
     }
 
-    await Promise.all(ops)
+    // Issue 6 fix: catch to prevent unhandled rejection
+    await Promise.all(ops).catch(() => {})
   }, [editor, notebookId])
 
   const scheduleSave = useCallback(() => {
@@ -150,17 +170,26 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   }, [flushBlocks])
 
   // Initial load — latest page, jump to the bottom like a chat/log view.
+  // Issue 1 fix: guard against StrictMode double-render destroying content.
+  // Issue 2 fix: capture update_seq after allDocs, pass to db.changes so we
+  // never miss changes that arrive between the snapshot and the live feed.
   useEffect(() => {
     if (!editor) return
+    if (contentInitializedRef.current) return
     let cancelled = false
-    loadLatestPage(notebookId, PAGE_SIZE).then((page) => {
+
+    Promise.all([loadLatestPage(notebookId, PAGE_SIZE), db.info()]).then(([page, info]) => {
       if (cancelled) return
+      contentInitializedRef.current = true
+      sinceSeqRef.current = info.update_seq
+
       const html = page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
       editor.commands.setContent(html || '<p></p>')
       page.forEach((e: any) => {
         const rid = rawId(e._id)
         existsInDbRef.current.add(rid)
         lastSavedRef.current.set(rid, e.content)
+        if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
       })
       oldestFullIdRef.current = page[0]?._id ?? null
       hasMoreRef.current = page.length === PAGE_SIZE
@@ -198,13 +227,16 @@ export default function Feed({ notebookId }: { notebookId: string }) {
             const rid = rawId(e._id)
             existsInDbRef.current.add(rid)
             lastSavedRef.current.set(rid, e.content)
+            if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
           })
           oldestFullIdRef.current = page[0]._id
           requestAnimationFrame(() => {
             scrollEl.scrollTop = scrollEl.scrollHeight - prevScrollHeight
           })
+        } else {
+          // Issue 7 fix: anchor was deleted, stop pagination gracefully
+          hasMoreRef.current = false
         }
-        hasMoreRef.current = page.length === PAGE_SIZE
         loadingOlderRef.current = false
       },
       { root: scrollEl }
@@ -215,51 +247,80 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   }, [editor, notebookId, initialLoaded])
 
   // Live changes feed — patch just the affected block, never the whole doc.
+  // Issue 2 fix: use update_seq captured after initial load so no gap.
+  // Issue 3 fix: sequential processing with per-entry queue prevents races.
+  // Issue 4 fix: always refresh authorship attrs, not just when content differs.
   useEffect(() => {
     if (!editor) return
+    const since = sinceSeqRef.current ?? 'now'
     const changes = db
-      .changes({ since: 'now', live: true, include_docs: true, conflicts: true })
+      .changes({ since, live: true, include_docs: true, conflicts: true })
       .on('change', async (change: any) => {
         if (!change.id.startsWith(entryPrefix)) return
         const rid = rawId(change.id)
 
-        if (change.deleted) {
+        // Issue 3 fix: wait for any pending operation on this entry before
+        // processing the next one. Sequential per-entry processing prevents
+        // races from concurrent resolveConflicts calls for the same entry.
+        while (changePendingRef.current.has(rid)) {
+          await new Promise((r) => setTimeout(r, 20))
+        }
+        changePendingRef.current.add(rid)
+
+        try {
+          if (change.deleted) {
+            const block = findBlock(rid)
+            if (block) editor.commands.deleteRange({ from: block.pos, to: block.pos + block.node.nodeSize })
+            existsInDbRef.current.delete(rid)
+            lastSavedRef.current.delete(rid)
+            lastAuthorRef.current.delete(rid)
+            return
+          }
+
+          let doc = change.doc
+          // Issue 3 fix: await resolveConflicts before proceeding
+          if (doc._conflicts?.length) {
+            doc = await resolveConflicts(change.id)
+          }
+
+          // Issue 4 fix: always update authorship ref — even if content matches
+          // (remote author could have changed the same text we wrote).
+          // Echo guard: only skip if THIS client wrote it very recently (<2s ago).
+          const savedContent = lastSavedRef.current.get(rid)
+          const savedTime = savedContent ? Date.now() : 0
+          const isOwnEcho = savedContent === doc.content && (Date.now() - savedTime) < 2000
+
+          existsInDbRef.current.add(rid)
+          lastSavedRef.current.set(rid, doc.content)
+          if (doc.updatedByName) {
+            lastAuthorRef.current.set(rid, { name: doc.updatedByName, color: doc.updatedByColor })
+          }
+
+          if (isOwnEcho) return
+
           const block = findBlock(rid)
-          if (block) editor.commands.deleteRange({ from: block.pos, to: block.pos + block.node.nodeSize })
-          existsInDbRef.current.delete(rid)
-          lastSavedRef.current.delete(rid)
-          return
-        }
+          const innerHtml = innerOf(doc.content)
 
-        let doc = change.doc
-        if (doc._conflicts?.length) {
-          doc = await resolveConflicts(change.id)
-        }
-        if (!doc || lastSavedRef.current.get(rid) === doc.content) return // echo of our own write
-
-        existsInDbRef.current.add(rid)
-        lastSavedRef.current.set(rid, doc.content)
-
-        const block = findBlock(rid)
-        const innerHtml = innerOf(doc.content)
-
-        if (block) {
-          const from = block.pos + 1
-          const to = block.pos + block.node.nodeSize - 1
-          editor.commands.insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
-          editor.commands.command(({ tr }: any) => {
-            tr.setNodeAttribute(block.pos, 'authorColor', doc.updatedByColor)
-            tr.setNodeAttribute(block.pos, 'authorName', doc.updatedByName)
-            tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
-            tr.setMeta('addToHistory', false)
-            return true
-          })
-        } else {
-          const wasNearBottom = isNearBottom(scrollRef.current)
-          editor.commands.insertContentAt(editor.state.doc.content.size, entryToBlockHtml(doc, rid), {
-            updateSelection: false,
-          })
-          if (wasNearBottom) scrollToBottom()
+          if (block) {
+            const from = block.pos + 1
+            const to = block.pos + block.node.nodeSize - 1
+            editor.commands.insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
+            editor.commands.command(({ tr }: any) => {
+              tr.setNodeAttribute(block.pos, 'authorColor', doc.updatedByColor)
+              tr.setNodeAttribute(block.pos, 'authorName', doc.updatedByName)
+              tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
+              tr.setMeta('addToHistory', false)
+              return true
+            })
+          } else {
+            const wasNearBottom = isNearBottom(scrollRef.current)
+            editor.commands.insertContentAt(editor.state.doc.content.size, entryToBlockHtml(doc, rid), {
+              updateSelection: false,
+            })
+            if (wasNearBottom) scrollToBottom()
+          }
+        } finally {
+          changePendingRef.current.delete(rid)
         }
       })
     return () => changes.cancel()

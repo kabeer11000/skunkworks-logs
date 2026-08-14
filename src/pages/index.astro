@@ -1,7 +1,6 @@
 ---
 import PageShell from "@/components/PageShell";
 import Onboarding from "@/components/Onboarding";
-import DrainsGrid from "@/components/DrainsGrid";
 import Layout from "../layouts/Layout.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
@@ -11,7 +10,9 @@ const identity = cookie ? cookie.json() : null;
 <Layout>
 	{identity ? (
 		<PageShell client:load>
-			<DrainsGrid client:load />
+			<div class="flex flex-1 items-center justify-center">
+				<p class="text-sm text-muted-foreground">Select a drain from the sidebar</p>
+			</div>
 		</PageShell>
 	) : (
 		<Onboarding client:load />

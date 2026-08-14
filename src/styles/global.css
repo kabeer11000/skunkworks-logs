@@ -176,3 +176,8 @@
     border: none;
     outline: none;
 }
+
+.tiptap:focus {
+    border: none;
+    outline: none;
+}

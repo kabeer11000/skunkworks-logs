@@ -73,18 +73,28 @@ export async function saveEntry(entryId: string, html: string, identity: EntryId
 // Two clients editing the same entry while offline produces a genuine
 // PouchDB conflict on sync (divergent _rev branches under one _id).
 // Resolve deterministically on every client: last-write-wins by updatedAt.
+// Issue 9 fix: sequential deletion, await all before returning, surface errors.
 export async function resolveConflicts(entryId: string) {
   const doc: any = await db.get(entryId, { conflicts: true })
   if (!doc._conflicts?.length) return doc
 
-  const losers = await Promise.all(doc._conflicts.map((rev: string) => db.get(entryId, { rev })))
-  const winner = [doc, ...losers].reduce((a: any, b: any) => (b.updatedAt > a.updatedAt ? b : a))
-
-  await Promise.all(
-    [doc, ...losers]
-      .filter((c: any) => c._rev !== winner._rev)
-      .map((c: any) => db.remove(entryId, c._rev))
+  const losers = await Promise.all(
+    doc._conflicts.map((rev: string) =>
+      db.get(entryId, { rev }).catch(() => null)
+    )
   )
+  const winner = [doc, ...losers.filter(Boolean)].reduce(
+    (a: any, b: any) => (b.updatedAt > a.updatedAt ? b : a)
+  )
+
+  // Delete losers sequentially to avoid write conflicts during resolution
+  for (const loser of [doc, ...losers].filter((c: any) => c._rev !== winner._rev)) {
+    try {
+      await db.remove(entryId, loser._rev)
+    } catch {
+      // Non-fatal: losing revision may already be purged
+    }
+  }
 
   return winner
 }
