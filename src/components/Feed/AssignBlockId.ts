@@ -54,6 +54,8 @@ export const AssignBlockId = Extension.create<{ getIdentity: () => BlockIdentity
             tr.setNodeAttribute(pos, 'authorColor', identity.color)
             tr.setNodeAttribute(pos, 'authorName', identity.name)
             tr.setNodeAttribute(pos, 'updatedAt', null)
+            tr.setNodeAttribute(pos, 'createdAt', Date.now())
+            tr.setNodeAttribute(pos, 'createdByName', identity.name)
           })
 
           if (tr) tr.setMeta('addToHistory', false)

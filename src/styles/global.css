@@ -192,23 +192,8 @@
     box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
 }
 
-/* Author + time tooltip — shown above the card on hover, and on focus-within
-   so tapping into a block (touch) or tabbing to it (keyboard) reveals it too. */
-.tiptap p[data-entry-id]:hover::before,
-.tiptap p[data-entry-id]:focus-within::before {
-    content: attr(data-author-name) " · " attr(data-time-exact);
-    position: absolute;
-    top: -22px;
-    left: 8px;
-    background: oklch(0.2 0 0);
-    color: oklch(0.985 0 0);
-    font-size: 0.6875rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    z-index: 10;
-    pointer-events: none;
-}
+/* Author/history details are a real Popover now (EntryBlockView.tsx),
+   triggered by a small hover-revealed button rendered inside the block. */
 
 /* ProseMirror placeholder — dashed target so an empty log reads as clickable */
 .tiptap p.is-empty:only-child {

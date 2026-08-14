@@ -12,45 +12,15 @@ import { createEntry, saveEntry, deleteEntry, resolveConflicts, type EntryIdenti
 import { sanitizeHtml } from '@/services/sanitize'
 import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
+import { safeName, safeColor } from './utils'
 
 const PAGE_SIZE = 50
 const SAVE_DEBOUNCE_MS = 500
 
-function relativeTime(ts: number) {
-  const diff = Date.now() - ts
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  if (day < 30) return `${day}d ago`
-  return new Date(ts).toLocaleDateString()
-}
-
-// Safe extraction of author name
-function safeName(val: any): string {
-  if (typeof val === 'string') return val
-  if (typeof val === 'number') return String(val)
-  if (val && typeof val === 'object' && typeof val.name === 'string') return val.name
-  return 'Anonymous'
-}
-
-// Safe extraction of author color. Identity colors are CSS hsl() strings
-// (see deriveIdentity in services/identity.ts), not hex — this used to only
-// accept a leading '#' and silently fell back to grey for every hsl() color,
-// which is why saved entries looked grey after reload but showed the real
-// author color right after typing/pasting (AssignBlockId sets it directly,
-// bypassing this function).
-function safeColor(val: any): string {
-  if (typeof val === 'string' && val.trim()) return val
-  if (val && typeof val === 'object' && typeof val.color === 'string') return val.color
-  return '#999'
-}
-
-// Build a plain paragraph. Author/time are stored as data attributes on the <p>
-// (via BlockParagraph attrs), NOT inside the content. CSS hover shows a tooltip.
-// Strip any stale meta spans that may be baked into old entry content from bad saves.
+// Build a plain paragraph. Author/time/history are stored as data attributes
+// on the <p> (via BlockParagraph attrs) and read by the EntryBlockView
+// NodeView, NOT inside the content. Strip any stale meta spans that may be
+// baked into old entry content from bad saves.
 function entryToBlockHtml(entry: any, rid: string) {
   const rawContent = typeof entry.content === 'string' ? entry.content : '<p></p>'
   const src = document.createElement('div')
@@ -63,15 +33,11 @@ function entryToBlockHtml(entry: any, rid: string) {
   p.setAttribute('data-entry-id', rid)
   p.innerHTML = innerSrc ? sanitizeHtml(innerSrc.innerHTML) : ''
 
-  const author = safeName(entry.updatedByName)
-  const color = safeColor(entry.updatedByColor)
-  const time = entry.updatedAt ? relativeTime(entry.updatedAt) : ''
-  const exactTime = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Unknown'
-
-  p.setAttribute('data-author-name', author)
-  p.setAttribute('data-author-color', color)
-  p.setAttribute('data-time-relative', time)
-  p.setAttribute('data-time-exact', exactTime)
+  p.setAttribute('data-author-name', safeName(entry.updatedByName))
+  p.setAttribute('data-author-color', safeColor(entry.updatedByColor))
+  if (entry.updatedAt) p.setAttribute('data-updated-at', String(entry.updatedAt))
+  if (entry.createdAt) p.setAttribute('data-created-at', String(entry.createdAt))
+  p.setAttribute('data-created-by', safeName(entry.createdByName ?? entry.updatedByName))
 
   return p.outerHTML
 }
@@ -384,6 +350,8 @@ export default function Feed({ notebookId }: { notebookId: string }) {
               tr.setNodeAttribute(block.pos, 'authorColor', authorColor)
               tr.setNodeAttribute(block.pos, 'authorName', safeAuth)
               tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
+              tr.setNodeAttribute(block.pos, 'createdAt', doc.createdAt)
+              tr.setNodeAttribute(block.pos, 'createdByName', safeName(doc.createdByName ?? doc.updatedByName))
               tr.setMeta('addToHistory', false)
               return true
             })
@@ -417,7 +385,7 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           {saveState === 'error' && <span className="text-destructive">Couldn't save</span>}
         </div>
       )}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-4">
         {!initialLoaded && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
