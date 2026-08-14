@@ -40,7 +40,7 @@ export default function SyncIndicator({ dbName }: { dbName: string }) {
 		<Popover>
 			<PopoverTrigger
 				render={
-					<button className="fixed top-4 right-6 z-50 flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm outline-none hover:bg-background focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50" />
+					<button className="absolute top-4 right-6 z-50 flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm outline-none hover:bg-background focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50" />
 				}
 			>
 				<span className={`h-2 w-2 rounded-full ${meta.dot}`} />

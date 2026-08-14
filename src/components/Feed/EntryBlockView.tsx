@@ -11,14 +11,36 @@ export function EntryBlockView({ node }: NodeViewProps) {
   const creator = createdByName ? safeName(createdByName) : author
   const wasEdited = !!(createdAt && updatedAt && Number(createdAt) !== Number(updatedAt))
 
+  // Rendered directly rather than via Tiptap's Placeholder extension —
+  // ReactNodeViewRenderer's update() skips re-rendering when only
+  // decorations change and the node reference hasn't (see its source:
+  // "ProseMirror renders decorations independently on the contentDOM"),
+  // so Placeholder's is-empty/data-placeholder decoration never reaches a
+  // custom NodeView's wrapper at all.
+  //
+  // isComposer (explicitly managed by ensureLeadingComposer in
+  // Feed/index.tsx) — not raw emptiness — decides whether this shows the
+  // composer's dashed-border placeholder look. A real entry that happens to
+  // be empty (e.g. edited down to nothing) should look like a plain blank
+  // entry, not the composer.
+  const isComposer = !!node.attrs.isComposer && node.content.size === 0
+
   return (
     <NodeViewWrapper
       as="p"
       data-entry-id={entryId}
-      className="group relative"
-      style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, white)` }}
+      className={`group relative ${isComposer ? 'border border-dashed border-neutral-300' : ''}`}
+      style={{ backgroundColor: isComposer ? undefined : `color-mix(in srgb, ${color} 12%, white)` }}
     >
-      <Popover>
+      {isComposer && (
+        <span
+          contentEditable={false}
+          className="pointer-events-none absolute text-neutral-400"
+        >
+          Click to start typing, all your changes autosave…
+        </span>
+      )}
+      {!isComposer && <Popover>
         {/* Sits above the padding box entirely (-top-6, clear of the text's
             own top padding) so it never overlaps the actual text glyphs —
             a pill sitting -top-2.5 (inside the box) previously intercepted
@@ -59,7 +81,7 @@ export function EntryBlockView({ node }: NodeViewProps) {
             )}
           </div>
         </PopoverContent>
-      </Popover>
+      </Popover>}
       <NodeViewContent as="span" />
     </NodeViewWrapper>
   )

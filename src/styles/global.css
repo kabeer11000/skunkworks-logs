@@ -203,20 +203,11 @@
     box-shadow: 0 0 0 1px oklch(0.9 0.11 95 / 0.6);
 }
 
-/* ProseMirror placeholder — dashed target so an empty log reads as clickable */
-.tiptap p.is-empty:only-child {
-    border: 1px dashed oklch(0.85 0 0);
-    border-radius: 8px;
-    padding: 10px 14px;
-}
-
-.tiptap p.is-empty:only-child::before {
-    color: oklch(0.65 0 0);
-    content: attr(data-placeholder);
-    float: left;
-    height: 0;
-    pointer-events: none;
-}
+/* Composer placeholder (dashed border + "Click to start typing…") is
+   rendered directly in EntryBlockView.tsx, not via Tiptap's Placeholder
+   extension — its is-empty/data-placeholder decoration never reaches a
+   custom NodeView's wrapper (ReactNodeViewRenderer skips re-rendering when
+   only decorations change and the node itself hasn't). */
 
 /* Thin, rounded scrollbar for the feed's own scroll container */
 .feed-scroll {

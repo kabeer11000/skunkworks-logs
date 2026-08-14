@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import NewDrainDialog from './NewDrainDialog'
 import RenameDrainDialog from './RenameDrainDialog'
+import { AvatarGroup } from './AvatarGroup'
+import { listDrainMembers } from '@/services/drainsApi'
 
 const FOCUS_RING = 'outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
@@ -51,6 +53,14 @@ function DrainCard({
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const href = `/drains/${drain.dbName}`
+  const [members, setMembers] = useState<string[]>([])
+
+  useEffect(() => {
+    if (drain.visibility !== 'shared') return
+    listDrainMembers(drain.dbName)
+      .then(setMembers)
+      .catch(() => setMembers([]))
+  }, [drain.dbName, drain.visibility])
 
   return (
     <a
@@ -94,9 +104,12 @@ function DrainCard({
         </div>
       )}
 
-      <span className="text-[0.6875rem] text-neutral-400">
-        {drain.visibility === 'shared' ? 'Shared' : 'Private'}
-      </span>
+      <div className="flex items-center justify-between gap-1.5">
+        <span className="text-[0.6875rem] text-neutral-400">
+          {drain.visibility === 'shared' ? 'Shared' : 'Private'}
+        </span>
+        {drain.visibility === 'shared' && <AvatarGroup emails={members} max={3} />}
+      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger

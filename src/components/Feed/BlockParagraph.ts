@@ -49,6 +49,16 @@ export const BlockParagraph = Paragraph.extend({
         renderHTML: (attrs: any) =>
           attrs.createdByName ? { 'data-created-by': attrs.createdByName } : {},
       },
+      // Explicitly managed by ensureLeadingComposer in Feed/index.tsx —
+      // distinguishes "the one pinned composer slot at the top" from any
+      // other paragraph that happens to be empty (e.g. a real entry edited
+      // down to nothing), which should render as a plain blank entry, not
+      // the composer's dashed-border placeholder look.
+      isComposer: {
+        default: null,
+        parseHTML: () => null,
+        renderHTML: () => ({}),
+      },
     }
   },
 

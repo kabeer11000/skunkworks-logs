@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { Placeholder } from '@tiptap/extensions'
 import { DOMSerializer } from '@tiptap/pm/model'
 import { ulid } from 'ulid'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -125,7 +124,6 @@ export default function Feed({ dbName }: { dbName: string }) {
       }),
       BlockParagraph,
       CommentMark,
-      Placeholder.configure({ placeholder: 'Click to start typing, all your changes autosave…' }),
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),
     ],
     content: '',
@@ -140,22 +138,50 @@ export default function Feed({ dbName }: { dbName: string }) {
 
   // Keeps an always-empty paragraph pinned at position 0 as the composer
   // for the next new entry (newest-first order — new entries belong at the
-  // top). Once the user types into it, it becomes a real entry like any
-  // other, and this inserts a fresh empty one before it so there's always
-  // somewhere ready to type the next thing. Self-terminating: right after
-  // inserting, the new first child IS empty, so the next 'update' is a no-op.
+  // top), flagged via the isComposer attr so EntryBlockView can tell it
+  // apart from any other paragraph that just happens to be empty (e.g. a
+  // real entry edited down to nothing) — those should look like plain
+  // blank entries, not the composer's placeholder/dashed-border look.
+  // Once the user types into the composer, it becomes a real entry like
+  // any other, and this inserts a fresh flagged-empty one before it.
+  const composerRidRef = useRef<string | null>(null)
   useEffect(() => {
     if (!editor) return
     const ensureLeadingComposer = () => {
       const first = editor.state.doc.firstChild
-      if (first && first.type.name === 'paragraph' && first.textContent.trim().length > 0) {
-        editor.commands.command(({ tr }: any) => {
-          tr.insert(0, editor.schema.nodes.paragraph.create())
-          return true
-        })
-      }
+      if (!first || first.type.name !== 'paragraph') return
+      const firstRid = first.attrs.entryId as string | null
+      const firstIsEmpty = first.textContent.length === 0
+      const firstFlagged = !!first.attrs.isComposer
+
+      if (firstIsEmpty && firstFlagged && composerRidRef.current === firstRid) return
+
+      editor.commands.command(({ tr }: any) => {
+        // Clear the flag from whichever entry held it before, in case it's
+        // no longer the first child — otherwise it could show the composer
+        // look again if later edited back down to empty.
+        if (composerRidRef.current && composerRidRef.current !== firstRid) {
+          editor.state.doc.forEach((node: any, pos: number) => {
+            if (node.attrs.entryId === composerRidRef.current && node.attrs.isComposer) {
+              tr.setNodeAttribute(pos, 'isComposer', null)
+            }
+          })
+        }
+
+        if (firstIsEmpty) {
+          if (!firstFlagged) tr.setNodeAttribute(0, 'isComposer', true)
+          composerRidRef.current = firstRid
+        } else {
+          tr.setNodeAttribute(0, 'isComposer', null)
+          tr.insert(0, editor.schema.nodes.paragraph.create({ isComposer: true }))
+          composerRidRef.current = null
+        }
+        tr.setMeta('addToHistory', false)
+        return true
+      })
     }
     editor.on('update', ensureLeadingComposer)
+    ensureLeadingComposer()
     return () => {
       editor.off('update', ensureLeadingComposer)
     }
@@ -508,7 +534,7 @@ export default function Feed({ dbName }: { dbName: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {saveState !== 'idle' && (
-        <div className="fixed top-4 right-32 z-50 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+        <div className="absolute top-4 right-32 z-50 rounded-full border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
           {saveState === 'saving' && 'Saving…'}
           {saveState === 'saved' && 'Saved'}
           {saveState === 'error' && <span className="text-destructive">Couldn't save</span>}
