@@ -16,33 +16,20 @@ export const BlockParagraph = Paragraph.extend({
         default: null,
         parseHTML: (el: HTMLElement) => el.getAttribute('data-author-color'),
         renderHTML: (attrs: any) =>
-          attrs.authorColor ? { 'data-author-color': attrs.authorColor, style: `background-color:${tint(attrs.authorColor)}` } : {},
+          attrs.authorColor ? { 'data-author-color': attrs.authorColor } : {},
       },
       authorName: {
         default: null,
         parseHTML: (el: HTMLElement) => el.getAttribute('data-author-name'),
-        renderHTML: (attrs: any) => {
-          if (!attrs.authorName) return {}
-          const time = attrs.updatedAt
-            ? new Date(Number(attrs.updatedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : ''
-          return {
-            'data-author-name': attrs.authorName,
-            title: time ? `${attrs.authorName} · ${time}` : attrs.authorName,
-          }
-        },
+        renderHTML: (attrs: any) =>
+          attrs.authorName ? { 'data-author-name': attrs.authorName } : {},
       },
       updatedAt: {
         default: null,
         parseHTML: (el: HTMLElement) => el.getAttribute('data-updated-at'),
-        renderHTML: (attrs: any) => (attrs.updatedAt ? { 'data-updated-at': attrs.updatedAt } : {}),
+        renderHTML: (attrs: any) =>
+          attrs.updatedAt ? { 'data-updated-at': attrs.updatedAt } : {},
       },
     }
   },
 })
-
-function tint(color: string, alpha = 0.12) {
-  const m = color.match(/^hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)$/)
-  if (!m) return color
-  return `hsl(${m[1]} ${m[2]}% ${m[3]}% / ${alpha})`
-}

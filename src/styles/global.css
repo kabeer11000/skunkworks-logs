@@ -177,7 +177,42 @@
     outline: none;
 }
 
-.tiptap:focus {
-    border: none;
-    outline: none;
+/* Notion-like entry blocks — white card with border */
+.tiptap p[data-entry-id] {
+    border: 1px solid oklch(0.922 0 0);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    background: white;
+    position: relative;
+    transition: box-shadow 0.1s;
+}
+
+.tiptap p[data-entry-id]:hover {
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.08);
+}
+
+/* Hover tooltip for author + time — shown above the card on hover */
+.tiptap p[data-entry-id]:hover::before {
+    content: attr(data-author-name) " · " attr(data-time-relative);
+    position: absolute;
+    top: -22px;
+    left: 8px;
+    background: oklch(0.2 0 0);
+    color: oklch(0.985 0 0);
+    font-size: 0.6875rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* ProseMirror placeholder */
+.tiptap p.is-empty:only-child::before {
+    color: oklch(0.65 0 0);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
 }

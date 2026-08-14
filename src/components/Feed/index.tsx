@@ -15,17 +15,58 @@ import { AssignBlockId } from './AssignBlockId'
 const PAGE_SIZE = 50
 const SAVE_DEBOUNCE_MS = 500
 
-// One entry doc renders as one <p data-entry-id="..."> block in a single
-// shared editor — this turns a stored `<p>inner</p>` back into a block
-// tagged with its id + current author, safely (DOM APIs escape attrs).
+function relativeTime(ts: number) {
+  const diff = Date.now() - ts
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min}m ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.floor(hr / 24)
+  if (day < 30) return `${day}d ago`
+  return new Date(ts).toLocaleDateString()
+}
+
+// Safe extraction of author name
+function safeName(val: any): string {
+  if (typeof val === 'string') return val
+  if (typeof val === 'number') return String(val)
+  if (val && typeof val === 'object' && typeof val.name === 'string') return val.name
+  return 'Anonymous'
+}
+
+// Safe extraction of author color
+function safeColor(val: any): string {
+  if (typeof val === 'string' && /^#/.test(val)) return val
+  if (val && typeof val === 'object' && typeof val.color === 'string') return val.color
+  return '#999'
+}
+
+// Build a plain paragraph. Author/time are stored as data attributes on the <p>
+// (via BlockParagraph attrs), NOT inside the content. CSS hover shows a tooltip.
+// Strip any stale meta spans that may be baked into old entry content from bad saves.
 function entryToBlockHtml(entry: any, rid: string) {
+  const rawContent = typeof entry.content === 'string' ? entry.content : '<p></p>'
   const src = document.createElement('div')
-  src.innerHTML = entry.content || '<p></p>'
+  src.innerHTML = rawContent
+  // Remove stale meta spans that old saves may have left in content
+  src.querySelectorAll('.entry-meta, .entry-dot, .entry-author, .entry-sep, .entry-time, .entry-content').forEach((el) => el.remove())
   const innerSrc = src.firstElementChild as HTMLElement | null
 
   const p = document.createElement('p')
-  p.innerHTML = innerSrc ? sanitizeHtml(innerSrc.innerHTML) : ''
   p.setAttribute('data-entry-id', rid)
+  p.innerHTML = innerSrc ? sanitizeHtml(innerSrc.innerHTML) : ''
+
+  const author = safeName(entry.updatedByName)
+  const color = safeColor(entry.updatedByColor)
+  const time = entry.updatedAt ? relativeTime(entry.updatedAt) : ''
+  const exactTime = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Unknown'
+
+  p.setAttribute('data-author-name', author)
+  p.setAttribute('data-author-color', color)
+  p.setAttribute('data-time-relative', time)
+  p.setAttribute('data-time-exact', exactTime)
+
   return p.outerHTML
 }
 
@@ -300,14 +341,16 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 
           const block = findBlock(rid)
           const innerHtml = innerOf(doc.content)
+          const safeAuth = safeName(doc.updatedByName)
+          const safeColor = safeColor(doc.updatedByColor)
 
           if (block) {
             const from = block.pos + 1
             const to = block.pos + block.node.nodeSize - 1
             editor.commands.insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
             editor.commands.command(({ tr }: any) => {
-              tr.setNodeAttribute(block.pos, 'authorColor', doc.updatedByColor)
-              tr.setNodeAttribute(block.pos, 'authorName', doc.updatedByName)
+              tr.setNodeAttribute(block.pos, 'authorColor', safeColor)
+              tr.setNodeAttribute(block.pos, 'authorName', safeAuth)
               tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
               tr.setMeta('addToHistory', false)
               return true
@@ -346,18 +389,25 @@ export default function Feed({ notebookId }: { notebookId: string }) {
 }
 
 // Serializes just this block's inline content back into the plain
-// `<p>...</p>` shape stored in the entry doc — no data-entry-id etc.
+// `<p>...</p>` shape stored in the entry doc — strips the author/time meta
+// spans so only user text is saved.
 function serializeBlockContent(editor: any, node: any) {
   const serializer = DOMSerializer.fromSchema(editor.schema)
   const frag = serializer.serializeFragment(node.content)
   const wrapper = document.createElement('div')
   wrapper.appendChild(frag)
+
+  // Remove meta + content wrapper spans before saving
+  wrapper.querySelectorAll('.entry-meta, .entry-dot, .entry-author, .entry-sep, .entry-time, .entry-content').forEach((el) => el.remove())
+
   return `<p>${wrapper.innerHTML}</p>`
 }
 
+// Extract just the user text content from a stored entry, stripping meta.
 function innerOf(pHtml: string) {
   const div = document.createElement('div')
   div.innerHTML = pHtml || '<p></p>'
+  div.querySelectorAll('.entry-meta, .entry-dot, .entry-author, .entry-sep, .entry-time, .entry-content').forEach((el) => el.remove())
   const p = div.firstElementChild as HTMLElement | null
   return p ? p.innerHTML : ''
 }
