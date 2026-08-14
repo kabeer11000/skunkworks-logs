@@ -23,6 +23,27 @@ export function idBefore(id: string, by: number): string {
   return chars.join('')
 }
 
+// Sorts strictly between `predecessor` and `id` (predecessor < result < id)
+// by appending an extra character to `predecessor` rather than decrementing
+// from `id` — decrementing can land EXACTLY on predecessor's own value (or
+// even overshoot past it) when the two are numerically adjacent, which this
+// app's monotonicFactory ulid generator produces routinely for anything
+// minted in the same millisecond (quick typing, pasted multi-line content).
+// Appending always sorts strictly after the string appended to, so
+// `predecessor + suffix` is guaranteed > predecessor; it sorts < id as long
+// as predecessor < id already held (a shared prefix with a lower next
+// character, or a shorter string, both compare as expected). `bump`
+// distinguishes multiple simultaneous duplicates of the same original id —
+// each gets a different suffix off the SAME predecessor (not chained off
+// each other's result, which would flip the direction). Falls back to
+// idBefore when there's no predecessor to extend (id is already the
+// smallest known id).
+export function idBetween(predecessor: string | null, id: string, bump: number): string {
+  if (predecessor === null) return idBefore(id, bump)
+  const suffixIdx = Math.max(0, 31 - bump)
+  return predecessor + ULID_ALPHABET[suffixIdx]
+}
+
 // Inverse of idBefore — adds `by` (with carry) instead of subtracting, for
 // a new block that needs to sort immediately AFTER an existing id (a day's
 // AI summary sorting directly above that day's newest entry, under
