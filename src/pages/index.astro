@@ -1,34 +1,19 @@
 ---
-import Navigation from "@/components/navigation.astro";
+import PageShell from "@/components/PageShell";
+import Onboarding from "@/components/Onboarding";
+import DrainsGrid from "@/components/DrainsGrid";
 import Layout from "../layouts/Layout.astro";
-import Onboarding from "@/components/onboarding.astro";
-
 
 const cookie = Astro.cookies.get('sk_identity');
 const identity = cookie ? cookie.json() : null;
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
 <Layout>
-	<script>
-		import '@material/web/dialog/dialog.js';
-		import '@material/web/button/outlined-button.js';
-		import '@material/web/button/text-button.js';
-		import '@material/web/button/filled-button.js';
-		import '@material/web/textfield/outlined-text-field.js';
-	</script>
 	{identity ? (
-		<div class="flex w-full">
-			<Navigation transition:persist/>
-			<!-- Content View -->
-			<div class="p-8 h-200 w-200 mt-10 overflow-y-auto max-h-screen flex items-center flex-col justify-center rounded-full gap-y-4 mx-auto bg-radial from-neutral-300 to-60% to-white">
-				<img src="/logo/skunkworks-text.svg" class="w-60 grayscale opacity-60"/>
-				<div>Select a drain from the sidebar to get started</div>
-			</div>
-		</div>
+		<PageShell client:load>
+			<DrainsGrid client:load />
+		</PageShell>
 	) : (
-		<Onboarding />
+		<Onboarding client:load />
 	)}
 </Layout>

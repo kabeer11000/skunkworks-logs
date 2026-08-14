@@ -1,24 +1,16 @@
 ---
-import Editor from "@/components/editor";
-import Navigation from "@/components/navigation.astro";
-import Onboarding from "@/components/onboarding.astro";
+import Feed from "@/components/Feed";
+import PageShell from "@/components/PageShell";
+import Onboarding from "@/components/Onboarding";
 import Layout from "@/layouts/Layout.astro";
-
 
 const cookie = Astro.cookies.get('sk_identity');
 const identity = cookie ? cookie.json() : null;
 const drainId = `notebook:${Astro.params.drain}`;
-// Welcome to Astro! Wondering what to do next? Check out the 0Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
 <Layout>
 	<script>
-		import '@material/web/dialog/dialog.js';
-		import '@material/web/button/outlined-button.js';
-		import '@material/web/button/text-button.js';
-		import '@material/web/button/filled-button.js';
-		import '@material/web/textfield/outlined-text-field.js';
 		import { startSync } from '@/services/sync';
 
 		const dot = document.getElementById('sync-dot');
@@ -39,19 +31,16 @@ const drainId = `notebook:${Astro.params.drain}`;
 		});
 	</script>
 	{identity ? (
-		<div class="flex w-full">
-			{/* Contains drain creation code as well */}
-			<Navigation transition:persist/>
-			<!-- Content View -->
-			<div class="p-8 overflow-y-auto max-h-screen max-w-4xl mx-auto">
-				<div id="sync-indicator" class="fixed top-4 right-4 z-50 flex items-center gap-2 text-xs text-neutral-500">
+		<PageShell client:load>
+			<div class="relative mx-auto min-h-0 w-full max-w-4xl flex-1">
+				<div id="sync-indicator" class="fixed top-4 right-4 z-50 flex items-center gap-2 text-xs text-muted-foreground">
 					<span id="sync-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
 					<span id="sync-label">connecting</span>
 				</div>
-				<Editor id={drainId} client:only="react" />
+				<Feed notebookId={drainId} client:only="react" />
 			</div>
-		</div>
+		</PageShell>
 	) : (
-		<Onboarding />
+		<Onboarding client:load />
 	)}
 </Layout>

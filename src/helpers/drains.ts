@@ -21,12 +21,19 @@ const formatDrain = async (nb: any) => {
         visibility: nb.visibility,
         title,
         titleCipher: nb.titleCipher,
-        unlocked: !isPrivate || hasKey, 
-        content: nb.content // <--- ADD THIS!
+        unlocked: !isPrivate || hasKey,
     };
 };
 
+// AppSidebar's effect calls this on every mount, and React may remount it
+// across navigations, so populateDrains() must be safe to call more than
+// once \u2014 otherwise every remount leaks another live db.changes() listener,
+// and N leaked listeners means one real change gets applied N times.
+let activeChanges: ReturnType<typeof db.changes> | null = null;
+
 export const populateDrains = async () => {
+    activeChanges?.cancel();
+
     // 2. Perform the initial static fetch for fast loading
     const result = await db.allDocs({
         startkey: 'notebook:',
@@ -37,11 +44,11 @@ export const populateDrains = async () => {
     const initialDrains = await Promise.all(
         result.rows.map(row => formatDrain(row.doc))
     );
-    
+
     $drains.set(initialDrains);
 
     // 3. Set up the live listener for any future changes
-    db.changes({
+    activeChanges = db.changes({
         since: 'now', // Only listen to things that happen AFTER the initial fetch
         live: true,   // Keep the connection open permanently
         include_docs: true
@@ -70,7 +77,6 @@ export const populateDrains = async () => {
             // Add brand new notebook
             $drains.set([...currentDrains, updatedDrain]);
         }
-        console.log("updated drainlist")
     }).on('error', (err) => {
         console.error('PouchDB Changes Error:', err);
     });
