@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { monotonicFactory } from 'ulid'
+import { idBefore } from '@/utils/ulidArithmetic'
 
 // Plain ulid() only sorts correctly across different milliseconds — pasting
 // N lines assigns N ids inside one synchronous pass, all in the same
@@ -9,36 +10,15 @@ import { monotonicFactory } from 'ulid'
 // monotonicFactory keeps ids strictly increasing even within the same ms.
 const ulid = monotonicFactory()
 
-// Crockford base32, same alphabet ulid() itself uses.
-const ULID_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
-
 // Splitting an existing (already-saved) entry via Enter should keep both
 // halves sorted right next to each other, not send the new half to "now" —
 // under newest-first display, a fresh timestamp would fly it to the very
 // top on reload even though it visually stayed put mid-edit. The split-off
 // half always lands BELOW the original in the document (it's whatever came
 // after the cursor), and under descending/newest-first order a lower
-// on-screen position needs a SMALLER id, not a larger one — treats the id
-// as a big base-32 number and subtracts `by` (with borrow), so the result
-// sorts immediately before the original, with room for a few simultaneous
-// duplicates (rare, but possible) to each get a distinct, still-adjacent id.
-function idBefore(id: string, by: number): string {
-  const chars = id.split('')
-  let remaining = by
-  for (let i = chars.length - 1; i >= 0 && remaining > 0; i--) {
-    const idx = ULID_ALPHABET.indexOf(chars[i])
-    const digitBorrow = remaining % 32
-    let carryToNext = Math.floor(remaining / 32)
-    let newIdx = idx - digitBorrow
-    if (newIdx < 0) {
-      newIdx += 32
-      carryToNext += 1
-    }
-    chars[i] = ULID_ALPHABET[newIdx]
-    remaining = carryToNext
-  }
-  return chars.join('')
-}
+// on-screen position needs a SMALLER id, not a larger one (see idBefore in
+// utils/ulidArithmetic.ts), with room for a few simultaneous duplicates
+// (rare, but possible) to each get a distinct, still-adjacent id.
 
 export interface BlockIdentity {
   publicUserId: string

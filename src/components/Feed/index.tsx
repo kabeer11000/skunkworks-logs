@@ -4,11 +4,13 @@ import StarterKit from '@tiptap/starter-kit'
 import { DOMSerializer } from '@tiptap/pm/model'
 import { ulid } from 'ulid'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Loader2 } from 'lucide-react'
 import { getDrainDb } from '@/services/db'
 import { $identity } from '@/services/identity'
 import { loadLatestPage, loadOlderPage } from '@/utils/ulid-pages'
 import { createEntry, saveEntry, deleteEntry, resolveConflicts, type EntryIdentity } from '@/services/entries'
 import { loadComments, watchComments, createComment, deleteComment, type CommentDoc } from '@/services/comments'
+import { summarizeEntries } from '@/services/aiApi'
 // @ts-ignore - plain JS module
 import { sanitizeHtml } from '@/services/sanitize'
 import { BlockParagraph } from './BlockParagraph'
@@ -82,6 +84,7 @@ export default function Feed({ dbName }: { dbName: string }) {
   // legitimate trigger and pagination would never fire again.
   const [initialLoaded, setInitialLoaded] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [summarizingKey, setSummarizingKey] = useState<string | null>(null)
   const [comments, setComments] = useState<CommentDoc[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStateResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -546,6 +549,18 @@ export default function Feed({ dbName }: { dbName: string }) {
     if (e.target === e.currentTarget) editor?.chain().focus('start').run()
   }
 
+  const handleSummarize = async (key: string, entryIds: string[]) => {
+    setSummarizingKey(key)
+    try {
+      await summarizeEntries(dbName, entryIds)
+    } catch {
+      // Best-effort — the skeleton just disappears; nothing was
+      // optimistically inserted into the doc, so there's nothing to undo.
+    } finally {
+      setSummarizingKey(null)
+    }
+  }
+
   if (!identity) return null
 
   return (
@@ -569,8 +584,19 @@ export default function Feed({ dbName }: { dbName: string }) {
         {editor && <EditorToolbar editor={editor} anchorRef={editorColumnRef} />}
         <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-2 pt-16 pb-16">
         <div className="flex gap-4">
-          {editor && <OutlineAside editor={editor} dbName={dbName} />}
+          {editor && (
+            <OutlineAside editor={editor} summarizingKey={summarizingKey} onSummarize={handleSummarize} />
+          )}
           <div ref={editorColumnRef} className="min-w-0 flex-1">
+            {summarizingKey && (
+              <div className="mb-1.5 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-violet-500" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-2.5 w-3/4 animate-pulse rounded-full bg-violet-200" />
+                  <div className="h-2.5 w-1/2 animate-pulse rounded-full bg-violet-200" />
+                </div>
+              </div>
+            )}
             {!initialLoaded && (
               <div className="flex flex-col gap-1.5">
                 {SKELETON_ENTRY_WIDTHS.map((width, i) => (

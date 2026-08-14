@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react'
 import type { Editor } from '@tiptap/react'
-import { Bold, Italic, Underline, Strikethrough, Code, Eraser, Wand2 } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Code, Eraser, Wand2, Loader2 } from 'lucide-react'
 import { cleanupText } from '@/services/aiApi'
 
 // Finds the top-level paragraph node the cursor is currently inside — every
@@ -121,9 +121,11 @@ export function EditorToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={handleCleanup}
         disabled={cleaning}
-        className="flex size-7 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        className={`flex size-7 items-center justify-center rounded-full text-violet-500 outline-none transition-all hover:scale-110 hover:bg-violet-100 hover:text-violet-600 focus-visible:ring-2 focus-visible:ring-violet-400 ${
+          cleaning ? 'bg-violet-100' : ''
+        }`}
       >
-        <Wand2 className={`size-3.5 ${cleaning ? 'animate-pulse' : ''}`} />
+        {cleaning ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}
       </button>
     </div>
   )

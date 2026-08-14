@@ -32,9 +32,25 @@ export function EntryBlockView({ node }: NodeViewProps) {
     <NodeViewWrapper
       as="p"
       data-entry-id={entryId}
-      className={`group relative ${isComposer ? 'border border-dashed border-neutral-300' : ''}`}
-      style={{ backgroundColor: isComposer ? undefined : `color-mix(in srgb, ${color} 12%, white)` }}
+      className={`group relative ${isComposer ? 'border border-dashed border-neutral-300' : ''} ${
+        isSummary ? 'border-l-2 border-violet-300' : ''
+      }`}
+      style={{
+        backgroundColor: isComposer || isSummary ? undefined : `color-mix(in srgb, ${color} 12%, white)`,
+        backgroundImage: isSummary
+          ? 'linear-gradient(to right, color-mix(in srgb, #7c3aed 12%, white), white)'
+          : undefined,
+      }}
     >
+      {isSummary && (
+        <span
+          contentEditable={false}
+          className="pointer-events-none absolute -top-5 left-2 flex items-center gap-1 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-600"
+        >
+          <Sparkles className="size-2.5" />
+          AI Summary
+        </span>
+      )}
       {isComposer && (
         <span
           contentEditable={false}

@@ -3,7 +3,7 @@
 // src/pages/api/** route files, never from client components.
 const API_KEY = import.meta.env.MINIMAX_API_KEY as string | undefined
 const BASE_URL = 'https://api.minimax.io/v1'
-const MODEL = 'MiniMax-M2.1'
+const MODEL = 'MiniMax-M2.7'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'

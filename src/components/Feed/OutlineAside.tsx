@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Editor } from '@tiptap/react'
-import { Sparkles } from 'lucide-react'
-import { summarizeEntries } from '@/services/aiApi'
+import { Sparkles, Loader2 } from 'lucide-react'
 
 function dayLabel(ts: number) {
   const d = new Date(ts)
@@ -22,9 +21,16 @@ function dayLabel(ts: number) {
 // deliberately disabled, see StarterKit.configure in index.tsx), so a day
 // boundary is the natural section marker. Only reflects days currently
 // loaded into the editor; scrolling up loads older pages and grows this list.
-export function OutlineAside({ editor, dbName }: { editor: Editor; dbName: string }) {
+export function OutlineAside({
+  editor,
+  summarizingKey,
+  onSummarize,
+}: {
+  editor: Editor
+  summarizingKey: string | null
+  onSummarize: (key: string, entryIds: string[]) => void
+}) {
   const [days, setDays] = useState<{ key: string; label: string; entryId: string; entryIds: string[] }[]>([])
-  const [summarizing, setSummarizing] = useState<string | null>(null)
 
   useEffect(() => {
     const recompute = () => {
@@ -53,18 +59,6 @@ export function OutlineAside({ editor, dbName }: { editor: Editor; dbName: strin
     }
   }, [editor])
 
-  const handleSummarize = async (key: string, entryIds: string[]) => {
-    setSummarizing(key)
-    try {
-      await summarizeEntries(dbName, entryIds)
-    } catch {
-      // Best-effort — the button just stops spinning; nothing to roll back
-      // since no local state was optimistically changed.
-    } finally {
-      setSummarizing(null)
-    }
-  }
-
   const jumpTo = (entryId: string) => {
     editor.view.dom.querySelector(`p[data-entry-id="${entryId}"]`)?.scrollIntoView({
       behavior: 'smooth',
@@ -91,11 +85,15 @@ export function OutlineAside({ editor, dbName }: { editor: Editor; dbName: strin
             <button
               type="button"
               title="Summarize this day"
-              onClick={() => handleSummarize(d.key, d.entryIds)}
-              disabled={summarizing === d.key}
-              className="rounded-md p-1 text-muted-foreground opacity-0 outline-none transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/day:opacity-100"
+              onClick={() => onSummarize(d.key, d.entryIds)}
+              disabled={summarizingKey === d.key}
+              className="rounded-md p-1 text-violet-400 opacity-60 outline-none transition-all hover:bg-violet-100 hover:text-violet-600 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-violet-400 group-hover/day:opacity-100"
             >
-              <Sparkles className={`size-3 ${summarizing === d.key ? 'animate-pulse' : ''}`} />
+              {summarizingKey === d.key ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Sparkles className="size-3" />
+              )}
             </button>
           </div>
         ))}

@@ -7,6 +7,7 @@
 // fetch (both browsers and Node's undici, which is what Vercel functions
 // use) rejects URLs containing userinfo ("URL contains credentials").
 import { ulid } from 'ulid'
+import { idAfter } from '@/utils/ulidArithmetic'
 
 const ADMIN_URL = import.meta.env.COUCHDB_ADMIN_URL as string | undefined
 
@@ -311,9 +312,9 @@ interface BotAuthor {
   source: string
 }
 
-async function putBotEntry(dbName: string, content: string, author: BotAuthor, createdAt: number) {
+async function putBotEntry(dbName: string, content: string, author: BotAuthor, createdAt: number, id?: string) {
   const doc = {
-    _id: `entry:${ulid()}`,
+    _id: `entry:${id ?? ulid()}`,
     type: 'entry',
     content,
     ...author,
@@ -324,7 +325,15 @@ async function putBotEntry(dbName: string, content: string, author: BotAuthor, c
     createdAt,
     updatedAt: createdAt,
   }
-  await putAdminDoc(dbName, doc)
+  // Not putAdminDoc — this always creates a brand-new doc, never updates an
+  // existing one, so a 409 here means the chosen _id genuinely collided with
+  // something else (a real problem worth surfacing), unlike putAdminDoc's
+  // other callers where 409-as-idempotent-success is the intended behavior.
+  const res = await adminFetch(`/${dbName}/${encodeURIComponent(doc._id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(doc),
+  })
+  if (!res.ok) throw new Error(`Failed to write ${doc._id} (${res.status})`)
 }
 
 const GITHUB_AUTHOR: BotAuthor = {
@@ -347,8 +356,26 @@ const AI_SUMMARY_AUTHOR: BotAuthor = {
   source: 'ai-summary',
 }
 
-export async function createSummaryEntry(dbName: string, content: string) {
-  await putBotEntry(dbName, content, AI_SUMMARY_AUTHOR, Date.now())
+// Sorts directly above (a slightly larger id than) the newest entry it
+// summarizes — under newest-first/descending order that puts the summary
+// right at the top of the section it recaps, instead of "now" (which would
+// fly it above entries from more recent days it has nothing to do with).
+// createdAt still reflects when it was actually generated, so "created 2m
+// ago" in its popover stays truthful even though _id sorts it elsewhere.
+export async function createSummaryEntry(dbName: string, content: string, newestSummarizedId: string) {
+  // This app's ulid generator (monotonicFactory, see AssignBlockId.ts) hands
+  // out ids incrementing by exactly 1 for anything minted in the same
+  // millisecond — if the day's newest entry was part of a fast burst,
+  // +1 can land exactly on an id that already belongs to something else.
+  // Retry with a bigger gap on collision instead of failing outright.
+  for (const gap of [16, 256, 4096]) {
+    try {
+      await putBotEntry(dbName, content, AI_SUMMARY_AUTHOR, Date.now(), idAfter(newestSummarizedId, gap))
+      return
+    } catch (err) {
+      if (gap === 4096) throw err
+    }
+  }
 }
 
 export async function getEntriesByIds(dbName: string, ids: string[]) {

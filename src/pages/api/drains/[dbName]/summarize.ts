@@ -17,10 +17,13 @@ export const POST: APIRoute = async ({ request, params }) => {
   }
 
   const body = await request.json().catch(() => ({}))
-  const entryIds = Array.isArray(body.entryIds) ? body.entryIds.filter((id: unknown) => typeof id === 'string') : []
-  if (entryIds.length === 0) {
+  // entryIds arrive as raw ulids (node.attrs.entryId has no prefix — see
+  // Feed/index.tsx's rawId), but doc ids in this database are "entry:<ulid>".
+  const rawIds = Array.isArray(body.entryIds) ? body.entryIds.filter((id: unknown) => typeof id === 'string') : []
+  if (rawIds.length === 0) {
     return new Response(JSON.stringify({ error: 'No entries to summarize' }), { status: 400 })
   }
+  const entryIds = rawIds.map((id: string) => `entry:${id}`)
 
   const entries = await getEntriesByIds(dbName, entryIds)
   if (entries.length === 0) {
@@ -28,6 +31,7 @@ export const POST: APIRoute = async ({ request, params }) => {
   }
 
   entries.sort((a: any, b: any) => a.createdAt - b.createdAt)
+  const newestSummarizedId = entries[entries.length - 1]._id.slice('entry:'.length)
   const transcript = entries
     .map((e: any) => `- ${stripHtmlTags(e.content)}`)
     .join('\n')
@@ -46,7 +50,7 @@ export const POST: APIRoute = async ({ request, params }) => {
   ])
 
   const summaryHtml = `<p>${escapeHtml(raw.trim())}</p>`
-  await createSummaryEntry(dbName, summaryHtml)
+  await createSummaryEntry(dbName, summaryHtml, newestSummarizedId)
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
