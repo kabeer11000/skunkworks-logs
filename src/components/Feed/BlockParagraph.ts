@@ -66,18 +66,25 @@ export const BlockParagraph = Paragraph.extend({
     return ReactNodeViewRenderer(EntryBlockView)
   },
 
-  // Newest-first order means Enter can't mean "continue below" (that's
-  // chronologically backwards) — instead it jumps back to the always-empty
-  // composer at the top (see ensureLeadingComposer in Feed/index.tsx),
-  // Slack-message-box style. Shift-Enter still inserts a literal line break
-  // within the current entry via StarterKit's default hardBreak binding —
-  // unaffected, not overridden here.
+  // Plain Enter always jumps back to the composer slot at the top
+  // (Slack-message-box style) — newest-first order means "continue below"
+  // doesn't make sense as the default. Detecting "am I currently in the
+  // composer" to decide this conditionally doesn't work: ensureLeadingComposer
+  // (Feed/index.tsx) moves the isComposer flag away the moment you type the
+  // first character, so by the time Enter is pressed you're never actually
+  // in the flagged node anymore. Mod-Shift-Enter is the explicit escape
+  // hatch for the other case — splitting an older, already-positioned entry
+  // into two in place. AssignBlockId's duplicate-id handling gives the
+  // split-off half an id sorted right below the original's (idBefore)
+  // instead of "now", so newest-first reload order matches what splitting
+  // in place looked like.
   addKeyboardShortcuts() {
     return {
       Enter: () => {
         this.editor.commands.focus(1)
         return true
       },
+      'Mod-Shift-Enter': () => this.editor.commands.splitBlock(),
     }
   },
 })

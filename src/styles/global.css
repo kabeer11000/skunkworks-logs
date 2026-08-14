@@ -233,3 +233,13 @@
 .feed-scroll::-webkit-scrollbar-thumb:hover {
     background-color: oklch(0.75 0 0);
 }
+
+/* Dog sprite — 512x1408 source is an 11-row x 4-col grid of 128x128 frames
+   (walk/run/sit/sleep poses stacked in separate rows), not one vertical
+   strip. Row 0 (y=0) is a clean 4-frame walk cycle facing right. Displayed
+   at 96px (scale 0.75), so the full sheet renders at 384x1056 and each
+   frame is 96px wide — steps through those 4 frames in place. */
+@keyframes dogWalkFrames {
+    from { background-position: 0 0; }
+    to { background-position: -384px 0; }
+}

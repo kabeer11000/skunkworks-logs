@@ -69,17 +69,56 @@ function DrainCard({
         e.preventDefault()
         triggerRef.current?.click()
       }}
-      className={`group relative flex flex-col gap-1 rounded-lg border p-3 transition-colors ${FOCUS_RING} ${
+      className={`group relative mb-2 flex flex-col gap-1 break-inside-avoid rounded-lg border p-3 transition-colors ${FOCUS_RING} ${
         active ? 'border-neutral-300 bg-secondary' : 'border-neutral-200 hover:bg-secondary/70'
       }`}
     >
       <div className="flex items-start justify-between gap-1.5">
-        <span className="line-clamp-2 text-sm font-medium leading-snug">{drain.title || 'Untitled'}</span>
-        {drain.visibility === 'shared' ? (
-          <Globe className="size-3 shrink-0 text-neutral-400 mt-0.5" />
-        ) : (
-          <Lock className="size-3 shrink-0 text-neutral-400 mt-0.5" />
-        )}
+        <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-snug">
+          {drain.title || 'Untitled'}
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          {drain.visibility === 'shared' ? (
+            <Globe className="size-3.5 text-neutral-400" />
+          ) : (
+            <Lock className="size-3.5 text-neutral-400" />
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  ref={triggerRef}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  className={`rounded p-1 hover:bg-neutral-100 ${FOCUS_RING}`}
+                />
+              }
+            >
+              <MoreHorizontal className="size-4 text-neutral-400" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(drain.dbName)}>
+                <Pencil className="size-3.5" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCopyLink(drain.dbName)}>
+                <Link className="size-3.5" />
+                Copy link
+              </DropdownMenuItem>
+              {drain.role === 'owner' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => onDelete(drain.dbName)}>
+                    <Trash2 className="size-3.5" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {drain.description && (
@@ -104,55 +143,22 @@ function DrainCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-1.5">
+      <div className="flex items-end justify-between gap-1.5 pt-1">
         <span className="text-[0.6875rem] text-neutral-400">
           {drain.visibility === 'shared' ? 'Shared' : 'Private'}
         </span>
         {drain.visibility === 'shared' && <AvatarGroup emails={members} max={3} />}
       </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <button
-              ref={triggerRef}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              className={`absolute right-2 top-2 rounded p-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-neutral-100 transition-opacity ${FOCUS_RING}`}
-            />
-          }
-        >
-          <MoreHorizontal className="size-3.5 text-neutral-400" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onEdit(drain.dbName)}>
-            <Pencil className="size-3.5" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onCopyLink(drain.dbName)}>
-            <Link className="size-3.5" />
-            Copy link
-          </DropdownMenuItem>
-          {drain.role === 'owner' && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => onDelete(drain.dbName)}>
-                <Trash2 className="size-3.5" />
-                Delete
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
     </a>
   )
 }
 
 export default function AppSidebar() {
   const drains = useStore($drains)
-  const [loading, setLoading] = useState(true)
+  // View transitions remount this island on every navigation — if $drains
+  // (a module-level nanostore) already has data from before, skip the
+  // skeleton flash instead of forcing a loading state on every nav.
+  const [loading, setLoading] = useState($drains.get().length === 0)
   const [editTarget, setEditTarget] = useState<{
     dbName: string
     title: string
@@ -231,14 +237,14 @@ export default function AppSidebar() {
           <div className="mb-3 text-xs text-neutral-400">Your personal engineering log</div>
 
           {loading ? (
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 columns-1 gap-2 sm:columns-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-[86px] w-full rounded-lg" />
+                <Skeleton key={i} className="mb-2 h-[86px] w-full break-inside-avoid rounded-lg" />
               ))}
             </div>
           ) : (
             <>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 columns-1 gap-2 sm:columns-2">
                 {drains.map((drain: any) => {
                   const href = `/drains/${drain.dbName}`
                   return (
@@ -270,6 +276,24 @@ export default function AppSidebar() {
             </>
           )}
         </div>
+
+        {/* Animated dog sprite — bottom left, walk cycle in place. Sheet is
+            an 11-row x 4-col grid of 128x128 frames (not a single vertical
+            strip); row 0 is a clean 4-frame walk cycle. */}
+        <div
+          className="shrink-0"
+          style={{
+            width: 96,
+            height: 96,
+            marginLeft: 8,
+            marginBottom: 4,
+            backgroundImage: 'url(/dog-sprite.png)',
+            backgroundSize: '384px 1056px',
+            backgroundRepeat: 'no-repeat',
+            imageRendering: 'pixelated',
+            animation: 'dogWalkFrames 0.8s steps(4) infinite',
+          }}
+        />
       </aside>
 
       {/* Edit Dialog */}
