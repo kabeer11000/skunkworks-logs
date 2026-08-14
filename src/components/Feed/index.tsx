@@ -117,7 +117,21 @@ export default function Feed({ notebookId }: { notebookId: string }) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ paragraph: false }),
+      // Every top-level node in this doc must be a plain paragraph — that's
+      // the unit AssignBlockId/flushBlocks key entries off of. Disabling the
+      // other block types means pasted headings/lists/quotes/code blocks get
+      // flattened to paragraphs by ProseMirror's parser instead of becoming
+      // untracked nodes that silently vanish on reload.
+      StarterKit.configure({
+        paragraph: false,
+        heading: false,
+        blockquote: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+        codeBlock: false,
+        horizontalRule: false,
+      }),
       BlockParagraph,
       Placeholder.configure({ placeholder: 'Click to start typing, all your changes autosave…' }),
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),

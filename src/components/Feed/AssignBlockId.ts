@@ -1,6 +1,13 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { ulid } from 'ulid'
+import { monotonicFactory } from 'ulid'
+
+// Plain ulid() only sorts correctly across different milliseconds — pasting
+// N lines assigns N ids inside one synchronous pass, all in the same
+// millisecond, so plain ulid() can hand out ids in a different order than
+// the lines appear in. Entries reload sorted by id, so that reshuffles them.
+// monotonicFactory keeps ids strictly increasing even within the same ms.
+const ulid = monotonicFactory()
 
 export interface BlockIdentity {
   publicUserId: string
