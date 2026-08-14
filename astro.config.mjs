@@ -6,8 +6,6 @@ import react from '@astrojs/react';
 
 import tailwindcss from '@tailwindcss/vite';
 
-// import lit from '@astrojs/lit';
-
 // https://astro.build/config
 export default defineConfig({
   integrations: [react()],

@@ -13,7 +13,7 @@ const drainId = `notebook:${Astro.params.drain}`;
 <Layout>
 	{identity ? (
 		<PageShell client:load>
-			<div class="mx-auto w-full max-w-5xl">
+			<div class="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
 				<SyncIndicator client:load />
 				<Feed notebookId={drainId} client:only="react" />
 			</div>

@@ -21,14 +21,28 @@ type Visibility = 'shared' | 'private'
 export default function NewDrainDialog() {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [tagInput, setTagInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>('shared')
   const [generatedKey, setGeneratedKey] = useState<string | null>(null)
 
   const reset = () => {
     setTitle('')
+    setDescription('')
+    setTagInput('')
+    setTags([])
     setVisibility('shared')
     setGeneratedKey(null)
   }
+
+  const addTag = (raw: string) => {
+    const t = raw.trim().toLowerCase().replace(/\s+/g, '-')
+    if (t && !tags.includes(t)) setTags((prev) => [...prev, t])
+    setTagInput('')
+  }
+
+  const removeTag = (t: string) => setTags((prev) => prev.filter((x) => x !== t))
 
   const create = async () => {
     const finalTitle = title.trim() || 'Untitled'
@@ -42,7 +56,7 @@ export default function NewDrainDialog() {
       key = await generateNotebookKey()
       const cryptoKey = await importNotebookKey(key)
       titleCipher = await encryptString(cryptoKey, finalTitle)
-      plainTitle = null
+      // titleCipher = encrypted copy for sharing; plainTitle kept in memory for local display
       setVaultKey(id, key)
     }
 
@@ -52,6 +66,8 @@ export default function NewDrainDialog() {
       type: 'notebook',
       visibility,
       title: plainTitle,
+      description: description.trim() || undefined,
+      tags: tags.length ? tags : undefined,
       titleCipher,
       createdBy: identity?.publicUserId,
       createdAt: Date.now(),
@@ -121,6 +137,51 @@ export default function NewDrainDialog() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="drain-desc">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="drain-desc"
+                placeholder="What's this drain for?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="drain-tags">Tags <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <div className="flex flex-wrap gap-1.5 rounded-md border border-input p-2 min-h-[42px]">
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                  >
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      className="hover:text-destructive"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="drain-tags"
+                  className="flex-1 min-w-[80px] bg-transparent outline-none text-sm"
+                  placeholder={tags.length ? '' : ' Add a tag, press Enter'}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      addTag(tagInput)
+                    } else if (e.key === 'Backspace' && !tagInput && tags.length) {
+                      removeTag(tags[tags.length - 1])
+                    }
+                  }}
+                  onBlur={() => tagInput && addTag(tagInput)}
+                />
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Visibility</Label>

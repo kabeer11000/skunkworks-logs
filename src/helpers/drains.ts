@@ -10,6 +10,17 @@ const formatDrain = async (nb: any) => {
     const hasKey = isPrivate && !!getVaultKey(nb._id);
 
     let title = nb.title;
+    // Private drain with a key but no plain title stored — decrypt from cipher
+    if (isPrivate && hasKey && !title && nb.titleCipher) {
+        try {
+            const { importNotebookKey, decryptString } = await import('@/services/crypto.js');
+            const cryptoKey = await importNotebookKey(getVaultKey(nb._id));
+            title = await decryptString(cryptoKey, nb.titleCipher);
+        } catch {
+            title = null;
+        }
+    }
+    // Private drain with cipher but no key yet — hide title until key is available
     if (isPrivate && !hasKey && nb.titleCipher) {
         title = null;
     }
@@ -21,6 +32,8 @@ const formatDrain = async (nb: any) => {
         visibility: nb.visibility,
         title,
         titleCipher: nb.titleCipher,
+        description: nb.description,
+        tags: nb.tags,
         unlocked: !isPrivate || hasKey,
     };
 };
@@ -81,3 +94,28 @@ export const populateDrains = async () => {
         console.error('PouchDB Changes Error:', err);
     });
 };
+
+export async function deleteDrain(id: string) {
+    const doc = await db.get(id);
+    await db.remove(doc);
+    $drains.set($drains.get().filter((d: any) => d._id !== id));
+}
+
+export async function updateDrainMeta(id: string, title: string, description?: string, tags?: string[]) {
+    const doc: any = await db.get(id);
+    if (title !== undefined) {
+        if (doc.visibility === 'private') {
+            const key = getVaultKey(doc._id);
+            if (!key) throw new Error('No encryption key for this private drain');
+            const { importNotebookKey, encryptString } = await import('@/services/crypto.js');
+            const cryptoKey = await importNotebookKey(key);
+            doc.titleCipher = await encryptString(cryptoKey, title);
+            doc.title = null;
+        } else {
+            doc.title = title;
+        }
+    }
+    if (description !== undefined) doc.description = description;
+    if (tags !== undefined) doc.tags = tags;
+    await db.put(doc);
+}

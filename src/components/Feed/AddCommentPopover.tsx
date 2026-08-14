@@ -5,9 +5,10 @@ import { MessageSquarePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // Reuses Tiptap's own floating-menu positioning (BubbleMenu) instead of
-// hand-rolling selection-rect math. shouldShow restricts commenting to a
-// selection that stays inside one already-saved entry, so a comment can
-// never straddle two entries or attach to a not-yet-persisted block.
+// hand-rolling selection-rect math. The mark itself works fine spanning
+// multiple entries — each entry just saves whichever slice of it falls
+// inside its own content — so the only real requirement is a non-empty
+// selection.
 export function AddCommentPopover({
   editor,
   onSubmit,
@@ -45,12 +46,7 @@ export function AddCommentPopover({
     <BubbleMenu
       editor={editor}
       updateDelay={0}
-      shouldShow={({ editor: ed, from, to }) => {
-        if (from === to) return false
-        const $from = ed.state.doc.resolve(from)
-        const $to = ed.state.doc.resolve(to)
-        return $from.parent === $to.parent && !!$from.parent.attrs.entryId
-      }}
+      shouldShow={({ from, to }) => from !== to}
       className="z-50 rounded-lg border bg-popover p-1.5 shadow-md"
     >
       {composing ? (

@@ -12,32 +12,37 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/lit": "^4.3.0",
     "@astrojs/react": "^5.0.7",
-    "@material/web": "^2.4.1",
+    "@astrojs/vercel": "^11.0.5",
+    "@base-ui/react": "^1.7.0",
     "@nanostores/react": "^1.1.0",
     "@tailwindcss/vite": "^4.3.1",
-    "@tiptap/extension-text-style": "^3.27.1",
     "@tiptap/extensions": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@webcomponents/template-shadowroot": "^0.2.1",
-    "astro": "^6.4.7",
+    "astro": "^7.2.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dompurify": "^3.4.11",
-    "lit": "^3.3.3",
     "lucide-react": "^1.21.0",
     "nanostores": "^1.3.0",
     "pouchdb": "^9.0.0",
     "pouchdb-browser": "^9.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
+    "tw-animate-css": "^1.4.0",
     "ulid": "^3.0.2",
     "vite-plugin-node-polyfills": "^0.28.0"
   },
   "devDependencies": {
-    "@types/pouchdb": "^6.4.2"
+    "@types/pouchdb": "^6.4.2",
+    "shadcn": "^4.18.0"
+  },
+  "overrides": {
+    "vite": "^7"
   }
 }

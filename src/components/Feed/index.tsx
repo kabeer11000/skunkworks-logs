@@ -16,11 +16,14 @@ import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
 import { CommentMark } from './CommentMark'
 import { CommentsAside } from './CommentsAside'
+import { OutlineAside } from './OutlineAside'
 import { AddCommentPopover } from './AddCommentPopover'
 import { safeName, safeColor } from './utils'
 
 const PAGE_SIZE = 50
 const SAVE_DEBOUNCE_MS = 500
+// Varying widths so the loading state reads as text lines, not a uniform bar grid.
+const SKELETON_ENTRY_WIDTHS = ['w-3/4', 'w-1/2', 'w-5/6', 'w-2/3', 'w-full', 'w-1/3']
 
 // Build a plain paragraph. Author/time/history are stored as data attributes
 // on the <p> (via BlockParagraph attrs) and read by the EntryBlockView
@@ -196,7 +199,10 @@ export default function Feed({ notebookId }: { notebookId: string }) {
       }
     }
 
-    if (ops.length === 0) return
+    if (ops.length === 0) {
+      setSaveState('idle')
+      return
+    }
 
     const results = await Promise.allSettled(ops)
     const hasError = results.some((r) => r.status === 'rejected')
@@ -463,22 +469,35 @@ export default function Feed({ notebookId }: { notebookId: string }) {
           {saveState === 'error' && <span className="text-destructive">Couldn't save</span>}
         </div>
       )}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-4">
-        {!initialLoaded && (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-11 w-full rounded-lg" />
-            ))}
-          </div>
-        )}
+      <div className="relative min-h-0 flex-1">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8"
+          style={{ background: 'linear-gradient(to bottom, white, transparent)' }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8"
+          style={{ background: 'linear-gradient(to top, white, transparent)' }}
+        />
+        <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-4 pt-8 pb-4">
         <div className="flex gap-6">
+          {editor && <OutlineAside editor={editor} />}
           <div className="min-w-0 flex-1">
+            {!initialLoaded && (
+              <div className="flex flex-col gap-1.5">
+                {SKELETON_ENTRY_WIDTHS.map((width, i) => (
+                  <div key={i} className="rounded-lg border border-neutral-200 bg-white p-2.5">
+                    <Skeleton className={`h-4 ${width}`} />
+                  </div>
+                ))}
+              </div>
+            )}
             <div ref={sentinelRef} />
             <div className={initialLoaded ? 'min-h-full' : 'hidden'} onClick={handleContainerClick}>
               <EditorContent editor={editor} />
             </div>
           </div>
           {editor && <CommentsAside editor={editor} comments={comments} onDelete={handleDeleteComment} />}
+        </div>
         </div>
       </div>
       {editor && <AddCommentPopover editor={editor} onSubmit={handleAddComment} />}

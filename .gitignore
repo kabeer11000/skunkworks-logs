@@ -22,3 +22,9 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# local PouchDB data
+main/
+
+# planning scratch notes
+tasks/
