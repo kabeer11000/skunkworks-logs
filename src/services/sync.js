@@ -2,7 +2,13 @@ import { getDrainDb } from './db.js';
 import { $syncStatus } from '../stores/sync';
 import { getAuthCredential } from './authSession';
 
-const REMOTE_HOST = (import.meta.env.VITE_COUCHDB_URL || 'http://localhost:5984/main').replace(/\/[^/]*$/, '');
+// VITE_COUCHDB_URL is a build-time value baked into this client bundle —
+// deliberately no fallback here. A silent default to localhost would mean
+// sync just quietly points at a database that doesn't exist in production,
+// with no error to explain why nothing's syncing.
+const REMOTE_HOST = import.meta.env.VITE_COUCHDB_URL
+  ? import.meta.env.VITE_COUCHDB_URL.replace(/\/[^/]*$/, '')
+  : null;
 
 // One live sync handler per currently-open drain database, keyed by dbName.
 // $syncStatus reflects whichever drain was most recently active — good
@@ -12,6 +18,11 @@ const handlers = new Map();
 
 export function startDrainSync(dbName) {
   if (handlers.has(dbName)) return handlers.get(dbName);
+  if (!REMOTE_HOST) {
+    console.error('VITE_COUCHDB_URL is not set — this client bundle has no sync target.');
+    $syncStatus.set('error');
+    return null;
+  }
   const credential = getAuthCredential();
   if (!credential) return null;
 
