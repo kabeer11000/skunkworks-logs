@@ -36,9 +36,14 @@ function safeName(val: any): string {
   return 'Anonymous'
 }
 
-// Safe extraction of author color
+// Safe extraction of author color. Identity colors are CSS hsl() strings
+// (see deriveIdentity in services/identity.ts), not hex — this used to only
+// accept a leading '#' and silently fell back to grey for every hsl() color,
+// which is why saved entries looked grey after reload but showed the real
+// author color right after typing/pasting (AssignBlockId sets it directly,
+// bypassing this function).
 function safeColor(val: any): string {
-  if (typeof val === 'string' && /^#/.test(val)) return val
+  if (typeof val === 'string' && val.trim()) return val
   if (val && typeof val === 'object' && typeof val.color === 'string') return val.color
   return '#999'
 }
