@@ -193,175 +193,183 @@ export default function RenameDrainDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit drain</DialogTitle>
           <DialogDescription>Update the details for this drain.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="edit-title">Title</Label>
-          <Input
-            id="edit-title"
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value)
-              if (error) setError('')
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            autoFocus
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="edit-desc">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
-          <Input
-            id="edit-desc"
-            placeholder="What's this drain for?"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="edit-tags">Tags <span className="text-muted-foreground font-normal">(optional)</span></Label>
-          <div className="flex flex-wrap gap-1.5 rounded-md border border-input p-2 min-h-[42px]">
-            {tags.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
-              >
-                {t}
-                <button
-                  type="button"
-                  onClick={() => removeTag(t)}
-                  className="hover:text-destructive"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              id="edit-tags"
-              className="flex-1 min-w-[80px] bg-transparent outline-none text-sm"
-              placeholder={tags.length ? '' : ' Add a tag, press Enter'}
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  addTag(tagInput)
-                } else if (e.key === 'Backspace' && !tagInput && tags.length) {
-                  removeTag(tags[tags.length - 1])
-                }
-              }}
-              onBlur={() => tagInput && addTag(tagInput)}
-            />
-          </div>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
 
-        {visibility === 'shared' && (
-          <div className="grid gap-2 border-t pt-3">
-            <Label>People with access</Label>
-            <div className="flex flex-col gap-1.5">
-              {members.map((email) => (
-                <div key={email} className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5 text-sm">
-                  <span>{email}</span>
-                  {isOwner && email !== $identity.get()?.email && (
+        <div className="grid max-h-[65vh] gap-6 overflow-y-auto pr-1 sm:grid-cols-2">
+          {/* Left column: core details */}
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                  if (error) setError('')
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-desc">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="edit-desc"
+                placeholder="What's this drain for?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-tags">Tags <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <div className="flex flex-wrap gap-1.5 rounded-md border border-input p-2 min-h-[42px]">
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                  >
+                    {t}
                     <button
                       type="button"
-                      onClick={() => handleRemove(email)}
-                      className="text-muted-foreground hover:text-destructive"
-                      title="Remove"
+                      onClick={() => removeTag(t)}
+                      className="hover:text-destructive"
                     >
-                      <X className="size-3.5" />
+                      ×
                     </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {isOwner && (
-              <div className="flex gap-1.5">
-                <Input
-                  placeholder="Invite by email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleInvite())}
+                  </span>
+                ))}
+                <input
+                  id="edit-tags"
+                  className="flex-1 min-w-[80px] bg-transparent outline-none text-sm"
+                  placeholder={tags.length ? '' : ' Add a tag, press Enter'}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      addTag(tagInput)
+                    } else if (e.key === 'Backspace' && !tagInput && tags.length) {
+                      removeTag(tags[tags.length - 1])
+                    }
+                  }}
+                  onBlur={() => tagInput && addTag(tagInput)}
                 />
-                <Button type="button" variant="outline" onClick={handleInvite} disabled={inviting}>
-                  {inviting ? 'Inviting…' : 'Invite'}
-                </Button>
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+
+            {visibility === 'shared' && (
+              <div className="grid gap-2 border-t pt-3">
+                <Label>People with access</Label>
+                <div className="flex flex-col gap-1.5">
+                  {members.map((email) => (
+                    <div key={email} className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5 text-sm">
+                      <span>{email}</span>
+                      {isOwner && email !== $identity.get()?.email && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(email)}
+                          className="text-muted-foreground hover:text-destructive"
+                          title="Remove"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {isOwner && (
+                  <div className="flex gap-1.5">
+                    <Input
+                      placeholder="Invite by email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleInvite())}
+                    />
+                    <Button type="button" variant="outline" onClick={handleInvite} disabled={inviting}>
+                      {inviting ? 'Inviting…' : 'Invite'}
+                    </Button>
+                  </div>
+                )}
+                {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
               </div>
             )}
-            {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
           </div>
-        )}
 
-        {isOwner && (
-          <div className="grid gap-2 border-t pt-3">
-            <Label>Public link</Label>
-            <p className="text-xs text-muted-foreground">
-              Anyone with the link can view this drain read-only — no sign-in required.
-            </p>
-            {publicToken && (
-              <div className="flex gap-1.5">
-                <Input readOnly value={publicUrl} onFocus={(e) => e.target.select()} />
+          {/* Right column: sharing & integrations */}
+          {isOwner && (
+            <div className="grid gap-6 sm:border-l sm:pl-6">
+              <div className="grid gap-2">
+                <Label>Public link</Label>
+                <p className="text-xs text-muted-foreground">
+                  Anyone with the link can view this drain read-only — no sign-in required.
+                </p>
+                {publicToken && (
+                  <div className="flex gap-1.5">
+                    <Input readOnly value={publicUrl} onFocus={(e) => e.target.select()} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigator.clipboard.writeText(publicUrl)}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigator.clipboard.writeText(publicUrl)}
+                  size="sm"
+                  onClick={handleTogglePublish}
+                  disabled={publishBusy}
                 >
-                  Copy
+                  {publishBusy ? 'Working…' : publicToken ? 'Unpublish' : 'Publish'}
+                </Button>
+                {publishError && <p className="text-xs text-destructive">{publishError}</p>}
+              </div>
+
+              <div className="grid gap-2 border-t pt-4">
+                <Label>GitHub integration</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add this as a webhook in your repo's{' '}
+                  <span className="font-medium">Settings → Webhooks → Add webhook</span>. Set{' '}
+                  <span className="font-medium">Payload URL</span> to the link below, Content type to{' '}
+                  <span className="font-medium">application/json</span>, and select the{' '}
+                  <span className="font-medium">push</span> and{' '}
+                  <span className="font-medium">pull requests</span> events.
+                </p>
+                <div className="flex gap-1.5">
+                  <Input readOnly value={ingestionUrl} onFocus={(e) => e.target.select()} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigator.clipboard.writeText(ingestionUrl)}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {lastIngestedAt
+                    ? `Last event received ${new Date(lastIngestedAt).toLocaleString()}`
+                    : 'Waiting for the first webhook event…'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateIngestion}
+                  disabled={ingestionBusy}
+                >
+                  {ingestionBusy ? 'Working…' : 'Regenerate link'}
                 </Button>
               </div>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleTogglePublish}
-              disabled={publishBusy}
-            >
-              {publishBusy ? 'Working…' : publicToken ? 'Unpublish' : 'Publish'}
-            </Button>
-            {publishError && <p className="text-xs text-destructive">{publishError}</p>}
-          </div>
-        )}
-
-        {isOwner && (
-          <div className="grid gap-2 border-t pt-3">
-            <Label>GitHub integration</Label>
-            <p className="text-xs text-muted-foreground">
-              Add this as a webhook in your repo's{' '}
-              <span className="font-medium">Settings → Webhooks → Add webhook</span>. Set{' '}
-              <span className="font-medium">Payload URL</span> to the link below, Content type to{' '}
-              <span className="font-medium">application/json</span>, and select the{' '}
-              <span className="font-medium">push</span> and{' '}
-              <span className="font-medium">pull requests</span> events.
-            </p>
-            <div className="flex gap-1.5">
-              <Input readOnly value={ingestionUrl} onFocus={(e) => e.target.select()} />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigator.clipboard.writeText(ingestionUrl)}
-              >
-                Copy
-              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {lastIngestedAt
-                ? `Last event received ${new Date(lastIngestedAt).toLocaleString()}`
-                : 'Waiting for the first webhook event…'}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerateIngestion}
-              disabled={ingestionBusy}
-            >
-              {ingestionBusy ? 'Working…' : 'Regenerate link'}
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
