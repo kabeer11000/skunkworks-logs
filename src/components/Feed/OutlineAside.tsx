@@ -54,11 +54,11 @@ export function OutlineAside({ editor }: { editor: Editor }) {
 
   return (
     <div className="w-40 shrink-0">
-      {/* top-8 matches scrollRef's pt-8 in index.tsx, and z-20 keeps this
+      {/* top-16 matches scrollRef's pt-16 in index.tsx, and z-20 keeps this
           above the top fade gradient (z-10) so it doesn't wash out white
           right where it pins — sticky was already applied, it just looked
           broken sitting exactly under that overlay. */}
-      <div className="sticky top-8 z-20 flex flex-col gap-0.5">
+      <div className="sticky top-16 z-20 flex flex-col gap-0.5">
         {days.map((d) => (
           <button
             key={d.key}

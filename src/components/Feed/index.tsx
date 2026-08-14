@@ -542,7 +542,7 @@ export default function Feed({ dbName }: { dbName: string }) {
       )}
       <div className="relative min-h-0 flex-1">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8"
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16"
           style={{ background: 'linear-gradient(to bottom, white, transparent)' }}
         />
         <div
@@ -550,8 +550,8 @@ export default function Feed({ dbName }: { dbName: string }) {
           style={{ background: 'linear-gradient(to top, white, transparent)' }}
         />
         {editor && <EditorToolbar editor={editor} anchorRef={editorColumnRef} />}
-        <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-4 pt-8 pb-16">
-        <div className="flex gap-6">
+        <div ref={scrollRef} className="feed-scroll h-full overflow-y-auto px-2 pt-16 pb-16">
+        <div className="flex gap-4">
           {editor && <OutlineAside editor={editor} />}
           <div ref={editorColumnRef} className="min-w-0 flex-1">
             {!initialLoaded && (
