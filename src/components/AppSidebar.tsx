@@ -3,6 +3,7 @@ import { useStore } from '@nanostores/react'
 import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox } from 'lucide-react'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
+import { getAuthCredential } from '@/services/authSession'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -150,7 +151,20 @@ export default function AppSidebar() {
   const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
 
   useEffect(() => {
-    $identity.set(getStoredIdentityClient())
+    const identity = getStoredIdentityClient()
+    $identity.set(identity)
+
+    // The sk_identity cookie (checked server-side to decide whether to show
+    // AuthGate at all) can outlive the sessionStorage credential the actual
+    // API calls need — e.g. closing and reopening the browser clears
+    // sessionStorage but not the year-long cookie. Without this check every
+    // authenticated call below just throws "Not signed in" with no recourse.
+    if (identity && !getAuthCredential()) {
+      document.cookie = 'sk_identity=; path=/; max-age=0'
+      window.location.href = '/'
+      return
+    }
+
     populateDrains().finally(() => setLoading(false))
   }, [])
 

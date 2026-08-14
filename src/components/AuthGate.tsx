@@ -8,7 +8,7 @@ import Login from './Login'
 // no cookie and needs Login, not Onboarding, so both live behind one gate
 // with a toggle instead of assuming new-vs-returning from cookie state.
 export default function AuthGate() {
-  const [mode, setMode] = useState<'signup' | 'login'>('signup')
+  const [mode, setMode] = useState<'signup' | 'login'>('login')
 
   return mode === 'signup' ? (
     <Onboarding onSwitchToLogin={() => setMode('login')} />

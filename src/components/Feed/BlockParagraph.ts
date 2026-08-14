@@ -55,4 +55,19 @@ export const BlockParagraph = Paragraph.extend({
   addNodeView() {
     return ReactNodeViewRenderer(EntryBlockView)
   },
+
+  // Newest-first order means Enter can't mean "continue below" (that's
+  // chronologically backwards) — instead it jumps back to the always-empty
+  // composer at the top (see ensureLeadingComposer in Feed/index.tsx),
+  // Slack-message-box style. Shift-Enter still inserts a literal line break
+  // within the current entry via StarterKit's default hardBreak binding —
+  // unaffected, not overridden here.
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => {
+        this.editor.commands.focus(1)
+        return true
+      },
+    }
+  },
 })

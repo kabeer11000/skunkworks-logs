@@ -132,11 +132,34 @@ export default function Feed({ dbName }: { dbName: string }) {
     onUpdate: () => scheduleSave(),
   })
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToTop = useCallback(() => {
     requestAnimationFrame(() => {
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      if (scrollRef.current) scrollRef.current.scrollTop = 0
     })
   }, [])
+
+  // Keeps an always-empty paragraph pinned at position 0 as the composer
+  // for the next new entry (newest-first order — new entries belong at the
+  // top). Once the user types into it, it becomes a real entry like any
+  // other, and this inserts a fresh empty one before it so there's always
+  // somewhere ready to type the next thing. Self-terminating: right after
+  // inserting, the new first child IS empty, so the next 'update' is a no-op.
+  useEffect(() => {
+    if (!editor) return
+    const ensureLeadingComposer = () => {
+      const first = editor.state.doc.firstChild
+      if (first && first.type.name === 'paragraph' && first.textContent.trim().length > 0) {
+        editor.commands.command(({ tr }: any) => {
+          tr.insert(0, editor.schema.nodes.paragraph.create())
+          return true
+        })
+      }
+    }
+    editor.on('update', ensureLeadingComposer)
+    return () => {
+      editor.off('update', ensureLeadingComposer)
+    }
+  }, [editor])
 
   const findBlock = useCallback(
     (rid: string) => {
@@ -232,7 +255,9 @@ export default function Feed({ dbName }: { dbName: string }) {
     saveTimerRef.current = setTimeout(flushBlocks, SAVE_DEBOUNCE_MS)
   }, [flushBlocks])
 
-  // Initial load — latest page, jump to the bottom like a chat/log view.
+  // Initial load — latest page, newest entry at the top (changelog
+  // convention, not chat) — no scroll adjustment needed since that's
+  // already where the viewport starts.
   // Issue 1 fix: guard against StrictMode double-render destroying content.
   // Issue 2 fix: capture update_seq after allDocs, pass to db.changes so we
   // never miss changes that arrive between the snapshot and the live feed.
@@ -246,20 +271,20 @@ export default function Feed({ dbName }: { dbName: string }) {
       contentInitializedRef.current = true
       sinceSeqRef.current = info.update_seq
 
-      const html = page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
-      editor.commands.setContent(html || '<p></p>')
+      // Leading empty paragraph is the always-there composer for the next
+      // new entry (see ensureLeadingComposer below) — pinned at position 0.
+      const html = '<p></p>' + page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
+      editor.commands.setContent(html)
       page.forEach((e: any) => {
         const rid = rawId(e._id)
         existsInDbRef.current.add(rid)
         lastSavedRef.current.set(rid, e.content)
         if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
       })
-      oldestFullIdRef.current = page[0]?._id ?? null
+      // page is newest-first; the oldest loaded entry (pagination anchor) is last.
+      oldestFullIdRef.current = page[page.length - 1]?._id ?? null
       hasMoreRef.current = page.length === PAGE_SIZE
-      requestAnimationFrame(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        setInitialLoaded(true)
-      })
+      requestAnimationFrame(() => setInitialLoaded(true))
     })
     return () => {
       cancelled = true
@@ -267,8 +292,9 @@ export default function Feed({ dbName }: { dbName: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, db])
 
-  // Load older pages when the top sentinel scrolls into view, preserving
-  // scroll position so the prepend doesn't yank the viewport.
+  // Load older pages when the bottom sentinel scrolls into view — older
+  // entries append at the end, which doesn't disturb the current scroll
+  // position (unlike prepending at the top did in the old oldest-first order).
   useEffect(() => {
     const sentinel = sentinelRef.current
     const scrollEl = scrollRef.current
@@ -280,22 +306,18 @@ export default function Feed({ dbName }: { dbName: string }) {
         if (loadingOlderRef.current || !hasMoreRef.current || !oldestFullIdRef.current) return
 
         loadingOlderRef.current = true
-        const prevScrollHeight = scrollEl.scrollHeight
         const page = await loadOlderPage(db, oldestFullIdRef.current, PAGE_SIZE)
 
         if (page.length > 0) {
           const html = page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
-          editor.commands.insertContentAt(0, html, { updateSelection: false })
+          editor.commands.insertContentAt(editor.state.doc.content.size, html, { updateSelection: false })
           page.forEach((e: any) => {
             const rid = rawId(e._id)
             existsInDbRef.current.add(rid)
             lastSavedRef.current.set(rid, e.content)
             if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
           })
-          oldestFullIdRef.current = page[0]._id
-          requestAnimationFrame(() => {
-            scrollEl.scrollTop = scrollEl.scrollHeight - prevScrollHeight
-          })
+          oldestFullIdRef.current = page[page.length - 1]._id
         } else {
           // Issue 7 fix: anchor was deleted, stop pagination gracefully
           hasMoreRef.current = false
@@ -381,11 +403,15 @@ export default function Feed({ dbName }: { dbName: string }) {
               return true
             })
           } else {
-            const wasNearBottom = isNearBottom(scrollRef.current)
-            editor.commands.insertContentAt(editor.state.doc.content.size, entryToBlockHtml(doc, rid), {
+            // New entries land right after the leading composer (position 0
+            // is reserved for it — see ensureLeadingComposer) — only
+            // auto-scroll if the user was already up there to see it.
+            const wasNearTop = isNearTop(scrollRef.current)
+            const composerSize = editor.state.doc.firstChild?.nodeSize ?? 0
+            editor.commands.insertContentAt(composerSize, entryToBlockHtml(doc, rid), {
               updateSelection: false,
             })
-            if (wasNearBottom) scrollToBottom()
+            if (wasNearTop) scrollToTop()
           }
         } finally {
           changePendingRef.current.delete(rid)
@@ -473,7 +499,8 @@ export default function Feed({ dbName }: { dbName: string }) {
   )
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) editor?.chain().focus('end').run()
+    // Blank space jumps to the composer at the top, not the oldest entry.
+    if (e.target === e.currentTarget) editor?.chain().focus('start').run()
   }
 
   if (!identity) return null
@@ -510,10 +537,10 @@ export default function Feed({ dbName }: { dbName: string }) {
                 ))}
               </div>
             )}
-            <div ref={sentinelRef} />
             <div className={initialLoaded ? 'min-h-full' : 'hidden'} onClick={handleContainerClick}>
               <EditorContent editor={editor} />
             </div>
+            <div ref={sentinelRef} />
           </div>
           {editor && <CommentsAside editor={editor} comments={comments} onDelete={handleDeleteComment} />}
         </div>
@@ -548,7 +575,7 @@ function innerOf(pHtml: string) {
   return p ? p.innerHTML : ''
 }
 
-function isNearBottom(el: HTMLElement | null, threshold = 120) {
+function isNearTop(el: HTMLElement | null, threshold = 120) {
   if (!el) return true
-  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+  return el.scrollTop < threshold
 }
