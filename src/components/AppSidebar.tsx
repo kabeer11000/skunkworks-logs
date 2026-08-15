@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search } from 'lucide-react'
+import { atom } from 'nanostores'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { $commandPaletteOpen } from './CommandPalette'
 import { RecentActivity } from './RecentActivity'
 import { ApiTokensDialog } from './ApiTokensDialog'
@@ -34,6 +35,11 @@ import { listDrainMembers } from '@/services/drainsApi'
 import UserMenu from './UserMenu'
 
 const FOCUS_RING = 'outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+
+// Below lg, the sidebar becomes a slide-over drawer toggled by PageShell's
+// mobile menu button instead of always occupying 30% of a screen too
+// narrow to spare that space — see PageShell.tsx.
+export const $sidebarOpen = atom(false)
 
 interface Drain {
   dbName: string
@@ -74,6 +80,7 @@ function DrainCard({
   return (
     <a
       href={href}
+      onClick={() => $sidebarOpen.set(false)}
       onContextMenu={(e) => {
         e.preventDefault()
         triggerRef.current?.click()
@@ -176,6 +183,9 @@ function DrainCard({
 
 export default function AppSidebar() {
   const drains = useStore($drains)
+  const sidebarOpen = useStore($sidebarOpen)
+  const tagsScrollRef = useRef<HTMLDivElement>(null)
+  const scrollTags = (dir: 1 | -1) => tagsScrollRef.current?.scrollBy({ left: dir * 120, behavior: 'smooth' })
   // View transitions remount this island on every navigation — if $drains
   // (a module-level nanostore) already has data from before, skip the
   // skeleton flash instead of forcing a loading state on every nav.
@@ -259,9 +269,33 @@ export default function AppSidebar() {
 
   return (
     <>
-      <aside className="flex h-full w-[30%] flex-col rounded-xl bg-background">
+      {/* Below lg, the sidebar is a bottom-sheet drawer instead of a
+          persistent 30%-width column — a fixed percentage would leave
+          almost no room for the feed on a phone-width screen. */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+          onClick={() => $sidebarOpen.set(false)}
+        />
+      )}
+      <aside
+        className={`fixed inset-x-2 bottom-2 z-50 flex h-[94%] max-h-[900px] flex-col rounded-2xl bg-background transition-transform duration-200 lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-none lg:w-[30%] lg:translate-y-0 lg:rounded-xl ${
+          sidebarOpen ? 'translate-y-0' : 'translate-y-[calc(100%+1rem)]'
+        }`}
+      >
+        <div className="flex shrink-0 justify-center pt-2 pb-1 lg:hidden">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
         {/* Header */}
         <div className="relative flex h-14 shrink-0 items-center border-b px-4">
+          <button
+            type="button"
+            title="Close menu"
+            onClick={() => $sidebarOpen.set(false)}
+            className={`mr-1 flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground lg:hidden ${FOCUS_RING}`}
+          >
+            <X className="size-4" />
+          </button>
           <a
             href="/"
             className={`rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-border hover:bg-secondary ${FOCUS_RING}`}
@@ -285,35 +319,56 @@ export default function AppSidebar() {
         <ApiTokensDialog open={tokensOpen} onOpenChange={setTokensOpen} />
         <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
 
-        <div className="feed-scroll flex flex-1 flex-col overflow-y-auto px-4 py-4">
+        <div className="feed-scroll flex flex-1 flex-col overflow-y-auto px-4 pb-4">
           {allTags.length > 0 && (
-            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-3 bg-background px-4 pt-0 pb-3 flex flex-wrap gap-1.5">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className={`rounded-full border px-2 py-0.5 text-[0.6875rem] transition-colors ${FOCUS_RING} ${
-                    activeTags.has(tag)
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border text-muted-foreground hover:bg-secondary'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
+            <div className="sticky top-0 z-10 -mx-4 mb-3 flex h-8 shrink-0 items-center gap-1 bg-background px-2">
+              <button
+                type="button"
+                title="Scroll tags left"
+                onClick={() => scrollTags(-1)}
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
+              >
+                <ChevronLeft className="size-3.5" />
+              </button>
+              <div
+                ref={tagsScrollRef}
+                className="flex flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.6875rem] transition-colors ${FOCUS_RING} ${
+                      activeTags.has(tag)
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border text-muted-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                title="Scroll tags right"
+                onClick={() => scrollTags(1)}
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
+              >
+                <ChevronRight className="size-3.5" />
+              </button>
             </div>
           )}
 
           {loading ? (
-            <div className="mt-3 columns-1 gap-2 sm:columns-2">
+            <div className="mt-4 columns-1 gap-2 sm:columns-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="mb-2 h-[86px] w-full break-inside-avoid rounded-lg" />
               ))}
             </div>
           ) : (
             <>
-              <div className="mt-3 columns-1 gap-2 sm:columns-2">
+              <div className="mt-4 columns-1 gap-2 sm:columns-2">
                 {drains.map((drain: any) => {
                   const href = `/drains/${drain.dbName}`
                   const dimmed = activeTags.size > 0 && !(drain.tags || []).some((t: string) => activeTags.has(t))
@@ -354,7 +409,7 @@ export default function AppSidebar() {
             an 11-row x 4-col grid of 128x128 frames (not a single vertical
             strip); row 0 is a clean 4-frame walk cycle. */}
         <div
-          className="shrink-0"
+          className="hidden shrink-0 lg:block"
           style={{
             width: 96,
             height: 96,

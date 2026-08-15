@@ -75,7 +75,7 @@ export function OutlineAside({
   }
 
   return (
-    <div className="w-40 shrink-0">
+    <div className="hidden w-40 shrink-0 lg:block">
       {/* top-16 matches scrollRef's pt-16 in index.tsx, and z-20 keeps this
           above the top fade gradient (z-10) so it doesn't wash out white
           right where it pins — sticky was already applied, it just looked

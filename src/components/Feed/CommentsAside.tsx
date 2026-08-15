@@ -67,7 +67,7 @@ export function CommentsAside({
   }, [editor, comments, heights])
 
   return (
-    <div ref={asideRef} className="relative w-64 shrink-0">
+    <div ref={asideRef} className="relative hidden w-64 shrink-0 lg:block">
       {comments.map((comment) => {
         const top = positions.get(comment.commentId)
         if (top === undefined) return null
