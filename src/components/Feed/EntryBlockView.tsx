@@ -1,9 +1,10 @@
 import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react'
-import { History, GitCommit, Sparkles, Bot } from 'lucide-react'
+import { History, GitCommit, Sparkles, Bot, Trash2 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 import { relativeTime, safeName, safeColor } from './utils'
 
-export function EntryBlockView({ node }: NodeViewProps) {
+export function EntryBlockView({ node, deleteNode }: NodeViewProps) {
   const { entryId, authorColor, authorName, updatedAt, createdAt, createdByName, source, viaToken } = node.attrs
   const isIngested = source === 'github'
   const isSummary = source === 'ai-summary'
@@ -116,6 +117,18 @@ export function EntryBlockView({ node }: NodeViewProps) {
               </p>
             )}
           </div>
+          {isSummary && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full text-destructive hover:bg-destructive/10"
+              onClick={() => deleteNode()}
+            >
+              <Trash2 className="size-3.5" />
+              Delete summary
+            </Button>
+          )}
         </PopoverContent>
       </Popover>}
       {isCleaning && (
