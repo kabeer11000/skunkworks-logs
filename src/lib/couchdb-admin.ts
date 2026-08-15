@@ -500,7 +500,7 @@ export async function getPublicEntries(dbName: string) {
   return data.rows
     .map((r: any) => r.doc)
     .filter(Boolean)
-    .sort((a: any, b: any) => a.createdAt - b.createdAt)
+    .sort((a: any, b: any) => b.createdAt - a.createdAt)
 }
 
 // The stored doc's real _id is "entry:<ulid>", but every other id this app

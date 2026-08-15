@@ -11,12 +11,20 @@ let notebook: any = null;
 let entries: any[] = [];
 if (resolved) {
 	notebook = await getAdminDoc(resolved.dbName, "notebook");
-	entries = await getPublicEntries(resolved.dbName);
+	entries = (await getPublicEntries(resolved.dbName)).filter(
+		(entry) => typeof entry.content === "string" && entry.content.replace(/<[^>]*>/g, "").trim().length > 0
+	);
 }
 
 function safeColor(val: unknown) {
 	return typeof val === "string" && val.trim() ? val : "#999";
 }
+
+function dayLabel(ts: number) {
+	return new Date(ts).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+
+let lastDay = "";
 ---
 
 <Layout>
@@ -32,13 +40,49 @@ function safeColor(val: unknown) {
 				{entries.length === 0 && (
 					<p class="text-sm text-muted-foreground">No entries yet.</p>
 				)}
-				{entries.map((entry) => (
-					<p
-						class="mb-1.5 rounded-lg p-3"
-						style={`background-color: color-mix(in srgb, ${safeColor(entry.updatedByColor)} 12%, var(--background))`}
-						set:html={entry.content}
-					/>
-				))}
+				{entries.map((entry) => {
+					const day = new Date(entry.createdAt).toDateString();
+					const showDayHeading = day !== lastDay;
+					lastDay = day;
+					return (
+						<>
+							{showDayHeading && (
+								<div class="mt-6 mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground first:mt-0">
+									{dayLabel(entry.createdAt)}
+								</div>
+							)}
+							{
+								// temp: AI summary rendering disabled — restore this branch to re-enable
+								// entry.source === "ai-summary" ? (
+								// 	<div
+								// 		class="mb-1.5 rounded-lg p-3"
+								// 		style={`background-color: color-mix(in srgb, ${safeColor(entry.updatedByColor)} 12%, var(--background))`}
+								// 		set:html={entry.content}
+								// 	/>
+								// ) : (
+								entry.source === "ai-summary" ? null : (
+									<div class="mb-1.5" set:html={entry.content} />
+								)
+								// )
+							}
+						</>
+					);
+				})}
+
+				<footer class="mt-12 flex flex-col items-center gap-3 rounded-2xl border bg-muted/30 px-6 py-8 text-center">
+					<img src="/logo/skunkworks-transparent.png" class="h-8 w-8 rounded-md bg-white p-1" alt="" />
+					<p class="text-sm font-semibold tracking-tight">SkunkWorks / Logs</p>
+					<p class="max-w-sm text-sm text-muted-foreground">
+						An offline-first engineering log. Track releases, incidents, and decisions —
+						synced across devices, encrypted when private.
+					</p>
+					<a
+						href="/"
+						class="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-80"
+					>
+						Start your own log
+					</a>
+				</footer>
 			</>
 		)}
 	</div>
