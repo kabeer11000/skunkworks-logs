@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
-import { getDirectoryDrains, updateUserEntryAsAuthor, deleteUserEntryAsAuthor } from '@/lib/couchdb-admin'
+import { getDirectoryDrains, updateUserEntryAsAuthor, deleteUserEntryAsAuthor, stripEntryPrefix } from '@/lib/couchdb-admin'
 import { escapeHtml } from '@/lib/htmlEscape'
 import { deriveIdentity } from '@/services/identity'
 
@@ -34,7 +34,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   try {
     const identity = await deriveIdentity(caller!.email, caller!.email.split('@')[0])
     const doc = await updateUserEntryAsAuthor(dbName, entryId, `<p>${escapeHtml(content)}</p>`, identity)
-    return new Response(JSON.stringify({ entry: doc }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response(
+      JSON.stringify({ entry: stripEntryPrefix(doc) }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
   } catch (err: any) {
     if (err.message === 'NOT_FOUND') return new Response(JSON.stringify({ error: 'Entry not found' }), { status: 404 })
     if (err.message === 'FORBIDDEN') {

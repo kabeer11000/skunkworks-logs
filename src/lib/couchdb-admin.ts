@@ -474,6 +474,17 @@ export async function getPublicEntries(dbName: string) {
     .sort((a: any, b: any) => a.createdAt - b.createdAt)
 }
 
+// The stored doc's real _id is "entry:<ulid>", but every other id this app
+// hands a client (node attrs, search results, summarize/edit/delete params)
+// is the bare ulid — an agent naturally passing back what the list/create
+// routes returned broke against summarize_day until this was caught in
+// real use (it double-prefixed to "entry:entry:<ulid>" and 404'd). Every
+// agent-facing entry route uses this before responding, so the whole
+// surface uses one consistent id shape.
+export function stripEntryPrefix(doc: any) {
+  return { ...doc, _id: doc._id.startsWith('entry:') ? doc._id.slice('entry:'.length) : doc._id }
+}
+
 // Entry CRUD for the agent API (src/pages/api/drains/[dbName]/entries*) —
 // entries otherwise only ever go through direct PouchDB<->CouchDB sync
 // using the browser's own login, never through this app's own API at all.
@@ -497,23 +508,34 @@ export async function getEntriesPage(dbName: string, limit: number, before?: str
   return data.rows.map((r: any) => r.doc).filter(Boolean)
 }
 
-export async function createUserEntry(
-  dbName: string,
-  content: string,
-  identity: { email: string; name: string; color: string },
-  viaToken: string
-) {
+// createdBy/updatedBy use publicUserId (a hash), matching exactly what the
+// normal browser save path (services/entries.ts) stamps them with — not
+// email. Mismatching this was a real bug: an entry created via the agent
+// API and then also touched once through the actual web UI ended up with
+// two differently-shaped identifiers for the same person on the same doc
+// (email-shaped from the agent, hash-shaped from the browser), which reads
+// like two different accounts touched it. createdByEmail/updatedByEmail
+// stay the real email either way — that's what author-only edit/delete
+// checks compare, so access control itself was never affected by this.
+interface UserIdentity {
+  email: string
+  name: string
+  color: string
+  publicUserId: string
+}
+
+export async function createUserEntry(dbName: string, content: string, identity: UserIdentity, viaToken: string) {
   const now = Date.now()
   const doc = {
     _id: `entry:${ulid()}`,
     type: 'entry',
     content,
-    createdBy: identity.email,
+    createdBy: identity.publicUserId,
     createdByName: identity.name,
     createdByColor: identity.color,
     createdByEmail: identity.email,
     createdAt: now,
-    updatedBy: identity.email,
+    updatedBy: identity.publicUserId,
     updatedByName: identity.name,
     updatedByColor: identity.color,
     updatedByEmail: identity.email,
@@ -531,7 +553,7 @@ export async function updateUserEntryAsAuthor(
   dbName: string,
   entryId: string,
   content: string,
-  identity: { email: string; name: string; color: string }
+  identity: UserIdentity
 ) {
   const doc = await getAdminDoc(dbName, `entry:${entryId}`)
   if (!doc) throw new Error('NOT_FOUND')
@@ -539,7 +561,7 @@ export async function updateUserEntryAsAuthor(
   const updated = {
     ...doc,
     content,
-    updatedBy: identity.email,
+    updatedBy: identity.publicUserId,
     updatedByName: identity.name,
     updatedByColor: identity.color,
     updatedByEmail: identity.email,

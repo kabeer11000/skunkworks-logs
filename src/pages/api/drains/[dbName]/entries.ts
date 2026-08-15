@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
-import { getDirectoryDrains, getEntriesPage, createUserEntry } from '@/lib/couchdb-admin'
+import { getDirectoryDrains, getEntriesPage, createUserEntry, stripEntryPrefix } from '@/lib/couchdb-admin'
 import { deriveIdentity } from '@/services/identity'
 import { escapeHtml } from '@/lib/htmlEscape'
 
@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request, params, url }) => {
 
   const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200)
   const before = url.searchParams.get('before') || undefined
-  const entries = await getEntriesPage(dbName, limit, before)
+  const entries = (await getEntriesPage(dbName, limit, before)).map(stripEntryPrefix)
 
   return new Response(JSON.stringify({ entries }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
@@ -42,5 +42,8 @@ export const POST: APIRoute = async ({ request, params }) => {
   const identity = await deriveIdentity(caller!.email, caller!.email.split('@')[0])
   const doc = await createUserEntry(dbName, `<p>${escapeHtml(content)}</p>`, { ...identity }, caller!.tokenName ?? 'API')
 
-  return new Response(JSON.stringify({ entry: doc }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+  return new Response(
+    JSON.stringify({ entry: stripEntryPrefix(doc) }),
+    { status: 201, headers: { 'Content-Type': 'application/json' } }
+  )
 }
