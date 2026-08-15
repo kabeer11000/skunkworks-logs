@@ -37,6 +37,12 @@ export function EntryBlockView({ node }: NodeViewProps) {
         isSummary ? 'border-l-2 border-violet-300' : ''
       }`}
       style={{
+        // The placeholder below is position: absolute (so it never
+        // intercepts clicks meant for the empty editable content beneath
+        // it) which means it contributes nothing to this box's height —
+        // without an explicit reservation, the wrapped two-line placeholder
+        // text overflows past a box sized only for one empty line.
+        minHeight: isComposer ? 68 : undefined,
         backgroundColor: isComposer || isSummary ? undefined : `color-mix(in srgb, ${color} 12%, white)`,
         backgroundImage: isSummary
           ? 'linear-gradient(to right, color-mix(in srgb, #7c3aed 12%, white), white)'
@@ -55,7 +61,7 @@ export function EntryBlockView({ node }: NodeViewProps) {
       {isComposer && (
         <span
           contentEditable={false}
-          className="pointer-events-none absolute text-neutral-400"
+          className="pointer-events-none absolute left-3.5 right-3.5 text-neutral-400"
         >
           Click to start typing, all your changes autosave… Type @ to mention someone, [[ to reference a drain or entry.
         </span>
