@@ -409,7 +409,7 @@ export default function AppSidebar() {
         {/* Animated dog sprite — bottom left, walk cycle in place. Sheet is
             an 11-row x 4-col grid of 128x128 frames (not a single vertical
             strip); row 0 is a clean 4-frame walk cycle. */}
-        <div
+        {/* <div
           className="hidden shrink-0 lg:block"
           style={{
             width: 96,
@@ -422,7 +422,7 @@ export default function AppSidebar() {
             imageRendering: 'pixelated',
             animation: 'dogWalkFrames 0.8s steps(4) infinite',
           }}
-        />
+        /> */}
       </aside>
 
       {/* Edit Dialog */}
