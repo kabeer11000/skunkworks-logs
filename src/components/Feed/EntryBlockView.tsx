@@ -27,6 +27,7 @@ export function EntryBlockView({ node }: NodeViewProps) {
   // be empty (e.g. edited down to nothing) should look like a plain blank
   // entry, not the composer.
   const isComposer = !!node.attrs.isComposer && node.content.size === 0
+  const isCleaning = !!node.attrs.cleaning
 
   return (
     <NodeViewWrapper
@@ -105,7 +106,16 @@ export function EntryBlockView({ node }: NodeViewProps) {
           </div>
         </PopoverContent>
       </Popover>}
-      <NodeViewContent as="span" />
+      {isCleaning && (
+        <span
+          contentEditable={false}
+          className="pointer-events-none absolute inset-0 flex flex-col justify-center gap-1.5 px-3.5"
+        >
+          <span className="ai-shimmer h-2.5 w-3/4 rounded-full" />
+          <span className="ai-shimmer h-2.5 w-1/2 rounded-full" />
+        </span>
+      )}
+      <NodeViewContent as="span" className={isCleaning ? 'invisible' : undefined} />
     </NodeViewWrapper>
   )
 }

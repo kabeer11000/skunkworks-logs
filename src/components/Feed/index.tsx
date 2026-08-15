@@ -592,8 +592,8 @@ export default function Feed({ dbName }: { dbName: string }) {
               <div className="mb-1.5 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
                 <Loader2 className="size-3.5 shrink-0 animate-spin text-violet-500" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-2.5 w-3/4 animate-pulse rounded-full bg-violet-200" />
-                  <div className="h-2.5 w-1/2 animate-pulse rounded-full bg-violet-200" />
+                  <div className="ai-shimmer h-2.5 w-3/4 rounded-full" />
+                  <div className="ai-shimmer h-2.5 w-1/2 rounded-full" />
                 </div>
               </div>
             )}

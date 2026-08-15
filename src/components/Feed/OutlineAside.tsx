@@ -36,10 +36,18 @@ export function OutlineAside({
     const recompute = () => {
       const byDay = new Map<string, { label: string; entryId: string; entryIds: string[] }>()
       editor.state.doc.forEach((node: any) => {
-        // Summary entries (source: 'ai-summary') aren't real log lines for a
-        // day — including them would let "summarize this day" re-summarize
-        // its own previous summary on a second click.
-        if (node.type.name !== 'paragraph' || !node.attrs.entryId || !node.attrs.createdAt || node.attrs.source) return
+        // Only exclude previous AI summaries (source: 'ai-summary') — including
+        // them would let "summarize this day" re-summarize its own previous
+        // summary on a second click. GitHub-ingested entries (source: 'github')
+        // are real log lines and should still count.
+        if (
+          node.type.name !== 'paragraph' ||
+          !node.attrs.entryId ||
+          !node.attrs.createdAt ||
+          node.attrs.source === 'ai-summary'
+        ) {
+          return
+        }
         const ts = Number(node.attrs.createdAt)
         const key = new Date(ts).toDateString()
         const existing = byDay.get(key)

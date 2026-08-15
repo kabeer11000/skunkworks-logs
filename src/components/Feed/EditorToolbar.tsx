@@ -15,6 +15,25 @@ function currentBlock(editor: Editor): { pos: number; node: any } | null {
   return found
 }
 
+// Re-locates a block by entryId rather than trusting a position captured
+// before the AI round-trip — other edits (this user's or a synced remote
+// change) could easily shift positions during that gap.
+function findBlockByEntryId(editor: Editor, entryId: string): { pos: number; node: any } | null {
+  let found: { pos: number; node: any } | null = null
+  editor.state.doc.forEach((node, pos) => {
+    if (node.attrs.entryId === entryId) found = { pos, node }
+  })
+  return found
+}
+
+function setCleaningFlag(editor: Editor, pos: number, value: boolean) {
+  editor.commands.command(({ tr }: any) => {
+    tr.setNodeAttribute(pos, 'cleaning', value)
+    tr.setMeta('addToHistory', false)
+    return true
+  })
+}
+
 const BUTTONS: { mark: string; icon: typeof Bold; label: string; run: (editor: Editor) => void }[] = [
   { mark: 'bold', icon: Bold, label: 'Bold', run: (e) => e.chain().focus().toggleBold().run() },
   { mark: 'italic', icon: Italic, label: 'Italic', run: (e) => e.chain().focus().toggleItalic().run() },
@@ -66,19 +85,26 @@ export function EditorToolbar({
   const handleCleanup = async () => {
     const found = currentBlock(editor)
     if (!found) return
-    const { pos, node } = found
+    const { node } = found
+    const entryId = node.attrs.entryId
     const text = node.textContent.trim()
-    if (!text) return
+    if (!text || !entryId) return
 
     setCleaning(true)
+    setCleaningFlag(editor, found.pos, true)
     try {
       const { text: cleaned } = await cleanupText(text)
-      const from = pos + 1
-      const to = pos + node.nodeSize - 1
-      editor.chain().focus().insertContentAt({ from, to }, cleaned).run()
+      const target = findBlockByEntryId(editor, entryId)
+      if (target) {
+        const from = target.pos + 1
+        const to = target.pos + target.node.nodeSize - 1
+        editor.chain().focus().insertContentAt({ from, to }, cleaned).run()
+      }
     } catch {
       // Best-effort — leave the original text untouched on failure.
     } finally {
+      const target = findBlockByEntryId(editor, entryId)
+      if (target) setCleaningFlag(editor, target.pos, false)
       setCleaning(false)
     }
   }
