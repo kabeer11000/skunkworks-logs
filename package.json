@@ -30,6 +30,7 @@
     "cmdk": "^1.1.1",
     "dompurify": "^3.4.11",
     "lucide-react": "^1.21.0",
+    "marked": "^18.0.9",
     "nanostores": "^1.3.0",
     "pouchdb": "^9.0.0",
     "pouchdb-browser": "^9.0.0",
