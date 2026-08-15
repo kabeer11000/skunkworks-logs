@@ -68,6 +68,46 @@ export const BlockParagraph = Paragraph.extend({
         parseHTML: (el: HTMLElement) => el.getAttribute('data-via-token'),
         renderHTML: (attrs: any) => (attrs.viaToken ? { 'data-via-token': attrs.viaToken } : {}),
       },
+      // Set only on a summary entry (source: 'ai-summary') — the entry ids
+      // it was generated from. SummaryGrouping.ts scans the doc for these
+      // to derive claimedBySummary on the entries themselves.
+      summarizedEntryIds: {
+        default: null,
+        parseHTML: (el: HTMLElement) => {
+          const raw = el.getAttribute('data-summarized-ids')
+          return raw ? raw.split(',') : null
+        },
+        renderHTML: (attrs: any) =>
+          attrs.summarizedEntryIds?.length ? { 'data-summarized-ids': attrs.summarizedEntryIds.join(',') } : {},
+      },
+      // Derived, not stored — true when some visible summary entry's
+      // summarizedEntryIds claims this entry (see SummaryGrouping.ts).
+      // Recomputed on every relevant transaction, so deleting the summary
+      // naturally reverts this back to false on its next scan.
+      claimedBySummary: {
+        default: false,
+        parseHTML: () => false,
+        renderHTML: () => ({}),
+      },
+      // Derived alongside claimedBySummary — true for a summary entry
+      // whose immediately-preceding sibling is ALSO a summary (re-
+      // summarizing the same day without deleting the old one first stacks
+      // a second summary node). Treated like a claimed entry for chain
+      // purposes — no badge of its own, blends into the same bar/margin as
+      // the root summary above it.
+      isNestedSummary: {
+        default: false,
+        parseHTML: () => false,
+        renderHTML: () => ({}),
+      },
+      // Derived alongside claimedBySummary — true for whichever claimed
+      // entry has a non-claimed (or no) paragraph right after it, i.e. the
+      // one that closes the visual "rim" wrapping the group.
+      isLastInGroup: {
+        default: false,
+        parseHTML: () => false,
+        renderHTML: () => ({}),
+      },
       // Explicitly managed by ensureLeadingComposer in Feed/index.tsx —
       // distinguishes "the one pinned composer slot at the top" from any
       // other paragraph that happens to be empty (e.g. a real entry edited

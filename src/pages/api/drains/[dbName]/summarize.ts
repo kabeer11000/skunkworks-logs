@@ -31,7 +31,10 @@ export const POST: APIRoute = async ({ request, params }) => {
   }
 
   entries.sort((a: any, b: any) => a.createdAt - b.createdAt)
-  const newestSummarizedId = entries[entries.length - 1]._id.slice('entry:'.length)
+  // Only entries actually found (not every id requested — some may not
+  // exist), so the summary's claimed set matches what it really covers.
+  const foundEntryIds = entries.map((e: any) => e._id.slice('entry:'.length))
+  const newestSummarizedId = foundEntryIds[foundEntryIds.length - 1]
   const transcript = entries
     .map((e: any) => `- ${stripHtmlTags(e.content)}`)
     .join('\n')
@@ -50,7 +53,7 @@ export const POST: APIRoute = async ({ request, params }) => {
   ])
 
   const summaryHtml = `<p>${escapeHtml(raw.trim())}</p>`
-  await createSummaryEntry(dbName, summaryHtml, newestSummarizedId)
+  await createSummaryEntry(dbName, summaryHtml, newestSummarizedId, foundEntryIds)
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }

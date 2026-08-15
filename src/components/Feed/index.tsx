@@ -15,6 +15,7 @@ import { summarizeEntries } from '@/services/aiApi'
 import { sanitizeHtml } from '@/services/sanitize'
 import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
+import { SummaryGrouping } from './SummaryGrouping'
 import { CommentMark } from './CommentMark'
 import { createMentionExtension } from './MentionExtension'
 import { ReferenceExtension } from './ReferenceExtension'
@@ -60,6 +61,9 @@ function entryToBlockHtml(entry: any, rid: string) {
   p.setAttribute('data-created-by', safeName(entry.createdByName ?? entry.updatedByName))
   if (entry.source) p.setAttribute('data-source', entry.source)
   if (entry.viaToken) p.setAttribute('data-via-token', entry.viaToken)
+  if (entry.summarizedEntryIds?.length) {
+    p.setAttribute('data-summarized-ids', entry.summarizedEntryIds.join(','))
+  }
 
   return p.outerHTML
 }
@@ -132,6 +136,7 @@ export default function Feed({ dbName }: { dbName: string }) {
       BlockParagraph,
       CommentMark,
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),
+      SummaryGrouping,
       createMentionExtension(dbName),
       ReferenceExtension,
     ],

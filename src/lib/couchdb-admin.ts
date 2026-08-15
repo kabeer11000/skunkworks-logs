@@ -383,7 +383,14 @@ interface BotAuthor {
   source: string
 }
 
-async function putBotEntry(dbName: string, content: string, author: BotAuthor, createdAt: number, id?: string) {
+async function putBotEntry(
+  dbName: string,
+  content: string,
+  author: BotAuthor,
+  createdAt: number,
+  id?: string,
+  extra?: Record<string, unknown>
+) {
   const doc = {
     _id: `entry:${id ?? ulid()}`,
     type: 'entry',
@@ -395,6 +402,7 @@ async function putBotEntry(dbName: string, content: string, author: BotAuthor, c
     updatedByEmail: author.createdByEmail,
     createdAt,
     updatedAt: createdAt,
+    ...extra,
   }
   // Not putAdminDoc — this always creates a brand-new doc, never updates an
   // existing one, so a 409 here means the chosen _id genuinely collided with
@@ -433,18 +441,33 @@ const AI_SUMMARY_AUTHOR: BotAuthor = {
 // fly it above entries from more recent days it has nothing to do with).
 // createdAt still reflects when it was actually generated, so "created 2m
 // ago" in its popover stays truthful even though _id sorts it elsewhere.
-export async function createSummaryEntry(dbName: string, content: string, newestSummarizedId: string) {
+export async function createSummaryEntry(
+  dbName: string,
+  content: string,
+  newestSummarizedId: string,
+  summarizedEntryIds: string[]
+) {
   // This app's ulid generator (monotonicFactory, see AssignBlockId.ts) hands
   // out ids incrementing by exactly 1 for anything minted in the same
-  // millisecond — if the day's newest entry was part of a fast burst,
-  // +1 can land exactly on an id that already belongs to something else.
-  // Retry with a bigger gap on collision instead of failing outright.
-  for (const gap of [16, 256, 4096]) {
+  // millisecond — if the day's newest entry was part of a fast burst, +1
+  // can land exactly on an id that already belongs to something else.
+  // Retry with a random gap on collision instead of failing outright — a
+  // FIXED gap sequence (originally 16/256/4096) runs out for real:
+  // re-summarizing the same day more than 3 times without deleting the
+  // older summaries first permanently claims each of those exact
+  // deterministic slots, so the 4th attempt collides on all of them and
+  // throws (confirmed directly, not theoretical — this is what happened).
+  // Random gaps don't repeat the same collision across separate calls.
+  const MAX_ATTEMPTS = 8
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const gap = 16 + Math.floor(Math.random() * 1_000_000)
     try {
-      await putBotEntry(dbName, content, AI_SUMMARY_AUTHOR, Date.now(), idAfter(newestSummarizedId, gap))
+      await putBotEntry(dbName, content, AI_SUMMARY_AUTHOR, Date.now(), idAfter(newestSummarizedId, gap), {
+        summarizedEntryIds,
+      })
       return
     } catch (err) {
-      if (gap === 4096) throw err
+      if (attempt === MAX_ATTEMPTS) throw err
     }
   }
 }
