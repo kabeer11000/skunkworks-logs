@@ -19,12 +19,17 @@ const AGENT = '#34d399'
     <a href="/#how" class="text-sm text-muted-foreground hover:text-foreground transition-colors">How it works</a>
     <a href="/docs" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</a>
   </div>
-  <a
-    href="/login"
-    class="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-opacity hover:opacity-85"
-  >
-    Open app
-  </a>
+  <div class="flex items-center gap-4">
+    <a href="/login" class="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline">
+      Log in
+    </a>
+    <a
+      href="/signup"
+      class="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-opacity hover:opacity-85"
+    >
+      Sign up free
+    </a>
+  </div>
 </nav>
 
 <!-- Hero -->
@@ -34,6 +39,14 @@ const AGENT = '#34d399'
     class="pointer-events-none absolute left-1/2 top-16 -z-10 h-[520px] w-[900px] -translate-x-1/2 opacity-40"
     style="background: radial-gradient(closest-side, oklch(0.35 0.12 300 / 0.5), transparent 70%);"
   ></div>
+
+  <a
+    href="/signup"
+    class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/10"
+  >
+    <span class="h-1.5 w-1.5 rounded-full bg-violet-400"></span>
+    Early access — free while we're in testing, pricing not decided yet
+  </a>
 
   <p class="mb-7 font-mono text-xs tracking-[0.2em] text-muted-foreground">MULTIPLE SOURCES. ONE LOG.</p>
 
@@ -414,6 +427,9 @@ const AGENT = '#34d399'
         </svg>
       </a>
     </div>
+    <p class="mt-5 text-xs text-muted-foreground">
+      Free while we're in testing — we haven't decided on pricing yet.
+    </p>
   </div>
 </section>
 
@@ -437,7 +453,7 @@ const AGENT = '#34d399'
     <a href="/#agents" class="text-muted-foreground hover:text-foreground transition-colors">For agents</a>
     <a href="/#how" class="text-muted-foreground hover:text-foreground transition-colors">How it works</a>
     <a href="/docs" class="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
-    <a href="/login" class="text-muted-foreground hover:text-foreground transition-colors">Open app</a>
+    <a href="/login" class="text-muted-foreground hover:text-foreground transition-colors">Log in</a>
   </nav>
 
   <div class="mt-12 flex flex-col items-center gap-3 border-t border-white/10 pt-6 sm:flex-row sm:justify-between">
