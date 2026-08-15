@@ -7,6 +7,12 @@ export async function fetchDrains(): Promise<DirectoryDrainEntry[]> {
   return data.drains
 }
 
+export async function fetchTrashedDrains(): Promise<DirectoryDrainEntry[]> {
+  const res = await fetch('/api/drains?trashed=true', { headers: { Authorization: authHeader() } })
+  const data = await parseErrorOr<{ drains: DirectoryDrainEntry[] }>(res, 'Failed to load trash')
+  return data.drains
+}
+
 export async function createDrain(
   title: string,
   visibility: 'private' | 'shared',
@@ -21,12 +27,32 @@ export async function createDrain(
   return parseErrorOr(res, 'Failed to create drain')
 }
 
+// Soft-delete — see couchdb-admin.ts's trashDrain. Moves it to trash,
+// doesn't touch the underlying data at all.
 export async function deleteDrainApi(dbName: string): Promise<void> {
   const res = await fetch(`/api/drains/${dbName}`, {
     method: 'DELETE',
     headers: { Authorization: authHeader() },
   })
   await parseErrorOr(res, 'Failed to delete drain')
+}
+
+export async function restoreDrainApi(dbName: string): Promise<void> {
+  const res = await fetch(`/api/drains/${dbName}/restore`, {
+    method: 'POST',
+    headers: { Authorization: authHeader() },
+  })
+  await parseErrorOr(res, 'Failed to restore drain')
+}
+
+// The explicit "delete forever, right now" action — only works on a drain
+// already in trash.
+export async function purgeDrainApi(dbName: string): Promise<void> {
+  const res = await fetch(`/api/drains/${dbName}/purge`, {
+    method: 'DELETE',
+    headers: { Authorization: authHeader() },
+  })
+  await parseErrorOr(res, 'Failed to permanently delete drain')
 }
 
 export async function updateDrainApi(

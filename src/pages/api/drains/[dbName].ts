@@ -2,9 +2,7 @@ import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
 import {
   getDirectoryDrains,
-  getDrainMembers,
-  deleteDrainDatabase,
-  removeDirectoryDrain,
+  trashDrain,
   putAdminDoc,
   getAdminDoc,
   updateDirectoryMetaForAllMembers,
@@ -12,6 +10,9 @@ import {
 
 export const prerender = false
 
+// Soft-delete, not a real destroy — see couchdb-admin.ts's trashDrain.
+// The actual permanent-delete path is POST /api/drains/:dbName/purge, a
+// separate, more clearly-dangerous action, not this one.
 export const DELETE: APIRoute = async ({ request, params }) => {
   const caller = await requireAuth(request)
   if (!caller) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -23,9 +24,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     return new Response(JSON.stringify({ error: 'Only the owner can delete this drain' }), { status: 403 })
   }
 
-  const members = await getDrainMembers(dbName)
-  await deleteDrainDatabase(dbName)
-  await Promise.all(members.map((email) => removeDirectoryDrain(email, dbName)))
+  await trashDrain(dbName)
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }

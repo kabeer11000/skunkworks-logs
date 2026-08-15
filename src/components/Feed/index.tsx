@@ -202,7 +202,7 @@ export default function Feed({ dbName }: { dbName: string }) {
   }, [editor])
 
   const findBlock = useCallback(
-    (rid: string) => {
+    (rid: string): { pos: number; node: any } | null => {
       if (!editor) return null
       let found: { pos: number; node: any } | null = null
       editor.state.doc.forEach((node, pos) => {
@@ -314,12 +314,46 @@ export default function Feed({ dbName }: { dbName: string }) {
       // Leading empty paragraph is the always-there composer for the next
       // new entry (see ensureLeadingComposer below) — pinned at position 0.
       const html = '<p></p>' + page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
-      editor.commands.setContent(html)
+      // addToHistory: false — without this, populating the doc from the
+      // database becomes ONE undoable step. A stray Ctrl+Z (nothing else
+      // undoable having happened yet) reverts it straight back to empty,
+      // and since flushBlocks' diffing sees every entry vanish, it deletes
+      // all of them from the database too — confirmed as the actual cause
+      // of "clicking an entry and hitting Ctrl+Z deletes everything,"
+      // not theoretical.
+      //
+      // preventUpdate was tried here too (this is a load, not a user edit)
+      // but reverted — it also suppresses the 'update' event
+      // ensureLeadingComposer (below) listens for, so the leading
+      // paragraph never got flagged as the composer after a fresh load,
+      // rendering as a plain empty entry instead — confirmed as a real
+      // regression, not just a theoretical risk. The lastSavedRef fix
+      // below is what actually stops the spurious-save bug; preventUpdate
+      // wasn't needed for it.
+      editor.chain().setContent(html).command(({ tr }: any) => {
+        tr.setMeta('addToHistory', false)
+        return true
+      }).run()
       page.forEach((e: any) => {
         const rid = rawId(e._id)
         existsInDbRef.current.add(rid)
-        lastSavedRef.current.set(rid, e.content)
         if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
+      })
+      // Seeded from what this node ACTUALLY re-serializes to right now,
+      // not the raw stored e.content — DOMPurify's sanitizer (used when
+      // building the HTML fed into the editor) and ProseMirror's own
+      // DOMSerializer (used later by flushBlocks to detect changes) don't
+      // necessarily round-trip byte-identical output for the same markup
+      // (attribute ordering/quoting differ). Comparing raw stored content
+      // against a re-serialized string was a real, demonstrated false-
+      // positive "changed" detection for entries with any tags/attributes
+      // (links, mentions, bot-formatted GitHub entries) — this makes the
+      // baseline and the later comparison go through the identical
+      // serialization pipeline, so only an actual edit can ever differ.
+      page.forEach((e: any) => {
+        const rid = rawId(e._id)
+        const block = findBlock(rid)
+        lastSavedRef.current.set(rid, block ? serializeBlockContent(editor, block.node) : e.content)
       })
       // page is newest-first; the oldest loaded entry (pagination anchor) is last.
       oldestFullIdRef.current = page[page.length - 1]?._id ?? null
@@ -364,12 +398,26 @@ export default function Feed({ dbName }: { dbName: string }) {
 
         if (page.length > 0) {
           const html = page.map((e: any) => entryToBlockHtml(e, rawId(e._id))).join('')
-          editor.commands.insertContentAt(editor.state.doc.content.size, html, { updateSelection: false })
+          // Same addToHistory + re-serialized-baseline fixes as the
+          // initial load above (see that comment for why preventUpdate
+          // isn't used here — it broke ensureLeadingComposer).
+          editor
+            .chain()
+            .insertContentAt(editor.state.doc.content.size, html, { updateSelection: false })
+            .command(({ tr }: any) => {
+              tr.setMeta('addToHistory', false)
+              return true
+            })
+            .run()
           page.forEach((e: any) => {
             const rid = rawId(e._id)
             existsInDbRef.current.add(rid)
-            lastSavedRef.current.set(rid, e.content)
             if (e.updatedByName) lastAuthorRef.current.set(rid, { name: e.updatedByName, color: e.updatedByColor })
+          })
+          page.forEach((e: any) => {
+            const rid = rawId(e._id)
+            const block = findBlock(rid)
+            lastSavedRef.current.set(rid, block ? serializeBlockContent(editor, block.node) : e.content)
           })
           oldestFullIdRef.current = page[page.length - 1]._id
         } else {
@@ -446,27 +494,59 @@ export default function Feed({ dbName }: { dbName: string }) {
           if (block) {
             const from = block.pos + 1
             const to = block.pos + block.node.nodeSize - 1
-            editor.commands.insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
-            editor.commands.command(({ tr }: any) => {
-              tr.setNodeAttribute(block.pos, 'authorColor', authorColor)
-              tr.setNodeAttribute(block.pos, 'authorName', safeAuth)
-              tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
-              tr.setNodeAttribute(block.pos, 'createdAt', doc.createdAt)
-              tr.setNodeAttribute(block.pos, 'createdByName', safeName(doc.createdByName ?? doc.updatedByName))
-              tr.setMeta('addToHistory', false)
-              return true
-            })
+            // Was two separate editor.commands.X() calls before — each
+            // dispatches its own transaction immediately, so the content
+            // replacement itself was never actually excluded from undo
+            // history, only the follow-up attr update was. Chained into
+            // one transaction so addToHistory covers both — a remote edit
+            // syncing into your view shouldn't be a step your own Ctrl+Z
+            // can walk back through. (preventUpdate was tried and reverted
+            // here too — see the initial-load effect's comment.)
+            editor
+              .chain()
+              .insertContentAt({ from, to }, sanitizeHtml(innerHtml), { updateSelection: false })
+              .command(({ tr }: any) => {
+                tr.setNodeAttribute(block.pos, 'authorColor', authorColor)
+                tr.setNodeAttribute(block.pos, 'authorName', safeAuth)
+                tr.setNodeAttribute(block.pos, 'updatedAt', doc.updatedAt)
+                tr.setNodeAttribute(block.pos, 'createdAt', doc.createdAt)
+                tr.setNodeAttribute(block.pos, 'createdByName', safeName(doc.createdByName ?? doc.updatedByName))
+                tr.setMeta('addToHistory', false)
+                return true
+              })
+              .run()
           } else {
             // New entries land right after the leading composer (position 0
             // is reserved for it — see ensureLeadingComposer) — only
             // auto-scroll if the user was already up there to see it.
             const wasNearTop = isNearTop(scrollRef.current)
             const composerSize = editor.state.doc.firstChild?.nodeSize ?? 0
-            editor.commands.insertContentAt(composerSize, entryToBlockHtml(doc, rid), {
-              updateSelection: false,
-            })
+            // Same addToHistory fix — a brand-new entry arriving from
+            // another tab/user shouldn't be undoable from here either.
+            editor
+              .chain()
+              .insertContentAt(composerSize, entryToBlockHtml(doc, rid), { updateSelection: false })
+              .command(({ tr }: any) => {
+                tr.setMeta('addToHistory', false)
+                return true
+              })
+              .run()
             if (wasNearTop) scrollToTop()
           }
+
+          // Overwrites the raw-content baseline set above (line ~485) with
+          // what this node ACTUALLY re-serializes to now that it's really
+          // in the editor — see the initial-load effect's comment for why:
+          // content built server-side (GitHub ingestion, AI summaries, the
+          // agent API) was never round-tripped through ProseMirror's own
+          // DOMSerializer the way this client's own writes always are, so
+          // comparing raw stored content against a freshly re-serialized
+          // string is a real, demonstrated false-positive "changed"
+          // detection — confirmed as the cause of a GitHub-authored entry
+          // flipping to "edited by" the current viewer after only viewing
+          // it, no edit ever made.
+          const finalBlock = findBlock(rid)
+          if (finalBlock) lastSavedRef.current.set(rid, serializeBlockContent(editor, finalBlock.node))
         } finally {
           changePendingRef.current.delete(rid)
         }

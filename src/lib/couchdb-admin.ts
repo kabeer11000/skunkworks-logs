@@ -219,6 +219,12 @@ export interface DirectoryDrainEntry {
   visibility: 'private' | 'shared'
   role: 'owner' | 'member'
   joinedAt: number
+  // Set when the owner "deletes" the drain — the underlying CouchDB
+  // database is left fully intact until purgeExpiredTrash actually
+  // removes it, past TRASH_RETENTION_DAYS. Drains with this set are
+  // filtered out of the normal list (GET /api/drains) and only surface in
+  // the trashed view (?trashed=true) — see api/drains/index.ts.
+  trashedAt?: number | null
 }
 
 export async function getDirectoryDrains(email: string): Promise<DirectoryDrainEntry[]> {
@@ -606,7 +612,7 @@ export async function deleteUserEntryAsAuthor(dbName: string, entryId: string, e
 // current member's cached copy when a drain's metadata changes.
 export async function updateDirectoryMetaForAllMembers(
   dbName: string,
-  meta: { title?: string; description?: string; tags?: string[] }
+  meta: { title?: string; description?: string; tags?: string[]; trashedAt?: number | null }
 ) {
   const members = await getDrainMembers(dbName)
   for (const email of members) {
@@ -619,5 +625,52 @@ export async function updateDirectoryMetaForAllMembers(
       }),
       () => ({ _id: `user:${email}`, type: 'directory', drains: [] })
     )
+  }
+}
+
+// Soft-delete: "deleting" a drain marks it trashed instead of destroying
+// anything. The underlying CouchDB database, its _security, and every
+// entry/comment in it are left completely untouched — only the cached
+// directory listing (what the sidebar's normal drain list reads) changes,
+// so it just disappears from view. Restorable any time before
+// purgeExpiredTrash actually removes it.
+export async function trashDrain(dbName: string) {
+  const notebook = await getAdminDoc(dbName, 'notebook')
+  await putAdminDoc(dbName, { ...notebook, trashedAt: Date.now() })
+  await updateDirectoryMetaForAllMembers(dbName, { trashedAt: Date.now() })
+}
+
+export async function restoreDrain(dbName: string) {
+  const notebook = await getAdminDoc(dbName, 'notebook')
+  await putAdminDoc(dbName, { ...notebook, trashedAt: null })
+  await updateDirectoryMetaForAllMembers(dbName, { trashedAt: null })
+}
+
+const TRASH_RETENTION_DAYS = 30
+
+// Permanently deletes a drain right now, bypassing the trash window
+// entirely — the explicit "delete forever" action, not the default one.
+// Directory entries are removed BEFORE the actual database destruction
+// (reversed from this route's original order): if the directory cleanup
+// partially fails, the real data is still sitting there intact and safe
+// to retry, rather than orphaning stale directory pointers at a database
+// that no longer exists.
+export async function purgeDrainNow(dbName: string) {
+  const members = await getDrainMembers(dbName)
+  await Promise.all(members.map((email) => removeDirectoryDrain(email, dbName)))
+  await deleteDrainDatabase(dbName)
+}
+
+// Called opportunistically from GET /api/drains (piggybacking on a request
+// that's already happening) rather than a dedicated background job — this
+// app has no persistent worker/cron infra, and a lazy per-owner sweep on
+// their own next visit is a reasonable tradeoff over adding one just for
+// this. Only ever looks at drains this specific caller owns.
+export async function purgeExpiredTrash(email: string) {
+  const drains = await getDirectoryDrains(email)
+  const cutoff = Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
+  const expired = drains.filter((d) => d.role === 'owner' && d.trashedAt && d.trashedAt < cutoff)
+  for (const d of expired) {
+    await purgeDrainNow(d.dbName).catch(() => {})
   }
 }

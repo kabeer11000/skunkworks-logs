@@ -1,15 +1,30 @@
 import type { APIRoute } from 'astro'
 import { ulid } from 'ulid'
 import { requireAuth } from '@/lib/requireAuth'
-import { provisionDrainDatabase, addDirectoryDrain, getDirectoryDrains, putAdminDoc } from '@/lib/couchdb-admin'
+import {
+  provisionDrainDatabase,
+  addDirectoryDrain,
+  getDirectoryDrains,
+  putAdminDoc,
+  purgeExpiredTrash,
+} from '@/lib/couchdb-admin'
 
 export const prerender = false
 
-export const GET: APIRoute = async ({ request }) => {
+// ?trashed=true returns only this caller's own trashed drains (the
+// "Recently deleted" view) instead of the normal list. Piggybacks a lazy
+// trash sweep onto whichever call happens first — no dedicated background
+// job, see couchdb-admin.ts's purgeExpiredTrash.
+export const GET: APIRoute = async ({ request, url }) => {
   const caller = await requireAuth(request)
   if (!caller) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  const drains = await getDirectoryDrains(caller.email)
+  await purgeExpiredTrash(caller.email).catch(() => {})
+
+  const all = await getDirectoryDrains(caller.email)
+  const wantTrashed = url.searchParams.get('trashed') === 'true'
+  const drains = all.filter((d) => wantTrashed ? !!d.trashedAt : !d.trashedAt)
+
   return new Response(JSON.stringify({ drains }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search, KeyRound } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search, KeyRound, History } from 'lucide-react'
 import { $commandPaletteOpen } from './CommandPalette'
 import { RecentActivity } from './RecentActivity'
 import { ApiTokensDialog } from './ApiTokensDialog'
+import { TrashDialog } from './TrashDialog'
 import { exportDrainMarkdown } from '@/utils/exportDrain'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
@@ -179,6 +180,7 @@ export default function AppSidebar() {
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
   const [tokensOpen, setTokensOpen] = useState(false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
 
   const allTags = useMemo(() => {
@@ -247,7 +249,7 @@ export default function AppSidebar() {
           <img src="/logo/skunkworks-transparent.png" className="h-6 w-6" alt="" />
           <a
             href="/"
-            className={`absolute left-1/2 -translate-x-1/2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-neutral-200 hover:bg-secondary ${FOCUS_RING}`}
+            className={`ml-2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-neutral-200 hover:bg-secondary ${FOCUS_RING}`}
           >
             skunkworks/logs
           </a>
@@ -268,11 +270,20 @@ export default function AppSidebar() {
             >
               <KeyRound className="size-4" />
             </button>
+            <button
+              type="button"
+              title="Recently deleted"
+              onClick={() => setTrashOpen(true)}
+              className={`flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
+            >
+              <History className="size-4" />
+            </button>
             <NewDrainDialog />
           </div>
         </div>
 
         <ApiTokensDialog open={tokensOpen} onOpenChange={setTokensOpen} />
+        <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
 
         {/* Drains */}
         <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
@@ -385,7 +396,10 @@ export default function AppSidebar() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{deleteTarget?.title}"?</AlertDialogTitle>
-            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription>
+              It'll move to Recently Deleted for 30 days — restorable any time before then, from the trash icon in
+              the sidebar.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
