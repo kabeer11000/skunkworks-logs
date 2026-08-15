@@ -40,9 +40,17 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://drains.d
 
 		<script is:inline>
 			(function () {
-				var t = localStorage.getItem('sk_theme') || 'system';
-				var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-				document.documentElement.classList.toggle('dark', dark);
+				function applyTheme() {
+					var t = localStorage.getItem('sk_theme') || 'system';
+					var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+					document.documentElement.classList.toggle('dark', dark);
+				}
+				applyTheme();
+				// View Transitions swaps <html>'s attributes to match each new
+				// page's server-rendered markup (which never has class="dark" —
+				// it's applied client-side), wiping it on every navigation unless
+				// this re-runs after each swap.
+				document.addEventListener('astro:after-swap', applyTheme);
 			})();
 		</script>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
