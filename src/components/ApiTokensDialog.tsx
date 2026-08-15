@@ -12,17 +12,22 @@ import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
 import { listApiTokens, createApiToken, revokeApiToken, type ApiToken } from '@/services/apiTokens'
 
-// Installed straight from this repo's mcp-server/ subfolder via npx's
-// github: + path: support — no local clone, no absolute path, no npm
-// publish. Confirmed directly against npm's own source (npm-package-arg's
-// gitSubdir handling) before relying on it, not assumed.
+// Installed from its own repo (github.com/kabeer11000/skunkworks-logs-mcp)
+// via plain npx github:owner/repo — no local clone, no npm publish.
+// A subfolder-of-this-monorepo approach (npx's git+path: subdir support)
+// was tried first and confirmed NOT viable: it pulled in this whole app's
+// dependency tree (PouchDB's native leveldown bindings included) since
+// npx's bin-resolution reads the repo-root package.json regardless of the
+// path: fragment — verified directly by running it, not assumed. A
+// dedicated repo with only this package's own two dependencies avoids
+// that entirely, confirmed working end-to-end the same way.
 function mcpConfigSnippet(origin: string, token: string) {
   return JSON.stringify(
     {
       mcpServers: {
         'skunkworks-logs': {
           command: 'npx',
-          args: ['-y', 'github:kabeer11000/skunkworks-logs#master::path:mcp-server'],
+          args: ['-y', 'github:kabeer11000/skunkworks-logs-mcp'],
           env: { SKUNKWORKS_API_URL: origin, SKUNKWORKS_API_TOKEN: token },
         },
       },
