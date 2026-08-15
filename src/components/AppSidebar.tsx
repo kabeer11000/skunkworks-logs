@@ -224,10 +224,11 @@ export default function AppSidebar() {
     $identity.set(identity)
 
     // The sk_identity cookie (checked server-side to decide whether to
-    // redirect to /login) can outlive the sessionStorage credential the actual
-    // API calls need — e.g. closing and reopening the browser clears
-    // sessionStorage but not the year-long cookie. Without this check every
-    // authenticated call below just throws "Not signed in" with no recourse.
+    // redirect to /login) and the localStorage credential the actual API
+    // calls need (authSession.ts) share the same lifetime now, but a user
+    // can still clear localStorage without clearing cookies (e.g. site data
+    // settings, browser extensions). Without this check every authenticated
+    // call below would just throw "Not signed in" with no recourse.
     if (identity && !getAuthCredential()) {
       document.cookie = 'sk_identity=; path=/; max-age=0'
       window.location.href = '/'
