@@ -13,8 +13,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
         {/* Left panel — branding, shared by Login and Onboarding */}
         <div className="hidden w-3/5 flex-col justify-between border-r bg-background p-12 md:flex">
           <div>
-            <img src="/logo/skunkworks-transparent.png" className="h-10 w-10 rounded-lg bg-[var(--logo-chip)] p-1.5" alt="" />
-            <h1 className="mt-8 max-w-md text-[2.75rem] font-bold leading-[1.1] tracking-tight">
+            <h1 className="max-w-md text-[2.75rem] font-bold leading-[1.1] tracking-tight">
               Every source drains into one log.
             </h1>
             <p className="mt-6 max-w-sm text-[0.8125rem] leading-relaxed text-muted-foreground">
@@ -41,9 +40,6 @@ export default function AuthShell({ children }: { children: ReactNode }) {
         {/* Right panel — form */}
         <div className="flex flex-1 items-center justify-center bg-background p-8">
           <div className="w-full max-w-sm">
-            <div className="mb-8 md:hidden">
-              <img src="/logo/skunkworks-transparent.png" className="h-10 w-10 rounded-lg bg-[var(--logo-chip)] p-1.5" alt="" />
-            </div>
             {children}
           </div>
         </div>

@@ -425,7 +425,7 @@ const GITHUB_AUTHOR: BotAuthor = {
   createdBy: 'github-ingestion',
   createdByName: 'GitHub',
   createdByColor: '#6e5494',
-  createdByEmail: 'github-ingestion@skunkworks.local',
+  createdByEmail: 'github-ingestion@drains.dev',
   source: 'github',
 }
 
@@ -437,7 +437,7 @@ const AI_SUMMARY_AUTHOR: BotAuthor = {
   createdBy: 'ai-summary',
   createdByName: 'AI Summary',
   createdByColor: '#7c3aed',
-  createdByEmail: 'ai-summary@skunkworks.local',
+  createdByEmail: 'ai-summary@drains.dev',
   source: 'ai-summary',
 }
 

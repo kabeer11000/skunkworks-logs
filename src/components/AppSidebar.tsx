@@ -253,12 +253,11 @@ export default function AppSidebar() {
       <aside className="flex h-full w-[30%] flex-col rounded-xl bg-background">
         {/* Header */}
         <div className="relative flex h-14 shrink-0 items-center border-b px-4">
-          <img src="/logo/skunkworks-transparent.png" className="h-6 w-6 rounded-md bg-white p-0.5" alt="" />
           <a
             href="/"
-            className={`ml-2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-border hover:bg-secondary ${FOCUS_RING}`}
+            className={`rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-border hover:bg-secondary ${FOCUS_RING}`}
           >
-            skunkworks/logs
+            drains.dev
           </a>
           <div className="ml-auto flex items-center gap-2">
             <button

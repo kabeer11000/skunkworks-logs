@@ -28,7 +28,7 @@ export async function updateDrainMeta(dbName: string, title: string, description
 }
 
 const GETTING_STARTED_LINES = [
-    '<p>Welcome to SkunkWorks Logs — this is your own private drain, just for you.</p>',
+    '<p>Welcome to Drains — this is your own private drain, just for you.</p>',
     '<p>Click anywhere below and start typing. Every line is its own entry and <strong>autosaves</strong> as you go — no save button.</p>',
     '<p>Select some text and a "Comment" button will appear — leave a note on it, like Google Docs.</p>',
     '<p>Right-click a drain in the sidebar (or use the <strong>…</strong> button) to rename it, copy its link, or delete it.</p>',

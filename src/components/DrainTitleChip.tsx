@@ -24,9 +24,9 @@ export default function DrainTitleChip({ dbName }: { dbName: string }) {
   }, [dbName, drain?.visibility])
 
   useEffect(() => {
-    document.title = drain?.title ? `${drain.title} — SkunkWorks Logs` : 'SkunkWorks Logs'
+    document.title = drain?.title ? `${drain.title} — Drains` : 'Drains'
     return () => {
-      document.title = 'SkunkWorks Logs'
+      document.title = 'Drains'
     }
   }, [drain?.title])
 

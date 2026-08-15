@@ -11,8 +11,7 @@ const AGENT = '#34d399'
   <!-- Nav -->
   <nav class="fixed top-0 inset-x-0 z-50 flex h-16 items-center justify-between border-b border-white/10 bg-background/70 px-6 backdrop-blur-md sm:px-10">
     <div class="flex items-center gap-2.5">
-      <img src="/logo/skunkworks-transparent.png" class="h-6 w-6 rounded-md bg-white p-1" alt="" />
-      <span class="text-sm font-medium tracking-tight">skunkworks/logs</span>
+      <span class="text-sm font-medium tracking-tight">drains.dev</span>
     </div>
     <div class="hidden items-center gap-8 sm:flex">
       <a href="/#features" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -236,9 +235,9 @@ const AGENT = '#34d399'
         </div>
         <pre class="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed"><code><span class="text-muted-foreground">{`{`}</span>
   <span style={`color:${AI}`}>"mcpServers"</span>: {`{`}
-    <span style={`color:${AI}`}>"skunkworks-logs"</span>: {`{`}
+    <span style={`color:${AI}`}>"drains"</span>: {`{`}
       <span style={`color:${HUMAN}`}>"command"</span>: <span class="text-muted-foreground">"npx"</span>,
-      <span style={`color:${HUMAN}`}>"args"</span>: [<span class="text-muted-foreground">"skunkworks-logs-mcp"</span>]
+      <span style={`color:${HUMAN}`}>"args"</span>: [<span class="text-muted-foreground">"-y"</span>, <span class="text-muted-foreground">"github:drains-dev/mcp"</span>]
     {`}`}
   {`}`}
 {`}`}</code></pre>
@@ -313,7 +312,7 @@ const AGENT = '#34d399'
         <div class="rounded-2xl border border-white/10 bg-card p-8">
           <div class="mb-6 flex items-center justify-center rounded-xl border border-white/10 bg-background/60 p-6">
             <div class="flex items-center gap-1.5 rounded-full border border-white/10 bg-card px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
-              skunkworks.logs/p/8fq2m
+              drains.dev/p/8fq2m
               <svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></svg>
             </div>
           </div>
@@ -408,7 +407,7 @@ const AGENT = '#34d399'
           href="/drains"
           class="inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3.5 text-sm font-medium text-background transition-opacity hover:opacity-85"
         >
-          Open SkunkWorks Logs
+          Open Drains
           <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -426,7 +425,7 @@ const AGENT = '#34d399'
 
     <div class="mx-auto h-10 w-px border-l border-dashed border-white/15"></div>
 
-    <img src="/logo/skunkworks-transparent.png" class="mx-auto mt-1 h-9 w-9 rounded-lg bg-white p-1.5" alt="" />
+    <p class="mt-1 font-mono text-sm font-medium tracking-tight">drains.dev</p>
 
     <p class="mx-auto mt-5 max-w-xs text-sm leading-relaxed text-muted-foreground">
       One log. Every source. Built for the people shipping, and the agents shipping alongside them.
@@ -440,7 +439,7 @@ const AGENT = '#34d399'
     </nav>
 
     <div class="mt-12 flex flex-col items-center gap-3 border-t border-white/10 pt-6 sm:flex-row sm:justify-between">
-      <p class="text-xs text-muted-foreground">© {new Date().getFullYear()} skunkworks/logs</p>
+      <p class="text-xs text-muted-foreground">© {new Date().getFullYear()} drains.dev</p>
       <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
         Every entry synced and encrypted

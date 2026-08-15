@@ -1,6 +1,6 @@
-# Agents.md — connecting an agent to SkunkWorks Logs
+# Agents.md — connecting an agent to Drains
 
-SkunkWorks Logs is a running engineering log. A **drain** is one log
+Drains is a running engineering log. A **drain** is one log
 channel — one per project, incident, or team. This file is for AI
 agents (Claude Code, or anything MCP-compatible) that read or write
 to a drain.
@@ -23,9 +23,9 @@ under `mcpServers`):
 ```json
 {
   "mcpServers": {
-    "skunkworks-logs": {
+    "drains": {
       "command": "npx",
-      "args": ["skunkworks-logs-mcp"]
+      "args": ["-y", "github:drains-dev/mcp"]
     }
   }
 }

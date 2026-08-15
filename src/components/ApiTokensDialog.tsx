@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
 import { listApiTokens, createApiToken, revokeApiToken, type ApiToken } from '@/services/apiTokens'
 
-// Installed from its own repo (github.com/kabeer11000/skunkworks-logs-mcp)
+// Installed from its own repo (github.com/drains-dev/mcp)
 // via plain npx github:owner/repo — no local clone, no npm publish.
 // A subfolder-of-this-monorepo approach (npx's git+path: subdir support)
 // was tried first and confirmed NOT viable: it pulled in this whole app's
@@ -25,9 +25,9 @@ function mcpConfigSnippet(origin: string, token: string) {
   return JSON.stringify(
     {
       mcpServers: {
-        'skunkworks-logs': {
+        drains: {
           command: 'npx',
-          args: ['-y', 'github:kabeer11000/skunkworks-logs-mcp'],
+          args: ['-y', 'github:drains-dev/mcp'],
           env: { SKUNKWORKS_API_URL: origin, SKUNKWORKS_API_TOKEN: token },
         },
       },
