@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
-import { getDirectoryDrains, getEntriesByIds, createSummaryEntry } from '@/lib/couchdb-admin'
+import { getDirectoryDrains, getEntriesByIds, createSummaryEntry, consumeAiUsage } from '@/lib/couchdb-admin'
 import { chatComplete } from '@/lib/minimax'
 import { escapeHtml, stripHtmlTags } from '@/lib/htmlEscape'
 
@@ -30,6 +30,11 @@ export const POST: APIRoute = async ({ request, params }) => {
     return new Response(JSON.stringify({ error: 'None of those entries exist' }), { status: 404 })
   }
 
+  const usage = await consumeAiUsage(caller.email)
+  if (!usage) {
+    return new Response(JSON.stringify({ error: 'Daily AI limit reached. Try again tomorrow.' }), { status: 429 })
+  }
+
   entries.sort((a: any, b: any) => a.createdAt - b.createdAt)
   // Only entries actually found (not every id requested — some may not
   // exist), so the summary's claimed set matches what it really covers.
@@ -55,5 +60,5 @@ export const POST: APIRoute = async ({ request, params }) => {
   const summaryHtml = `<p>${escapeHtml(raw.trim())}</p>`
   await createSummaryEntry(dbName, summaryHtml, newestSummarizedId, foundEntryIds)
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify({ ok: true, usage }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }

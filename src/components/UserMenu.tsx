@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { $identity, updateDisplayName } from '@/services/identity'
 import { logout } from '@/services/authSession'
 import { getStoredTheme, setTheme, watchSystemTheme, type Theme } from '@/services/theme'
+import { $aiUsage, fetchAiUsage } from '@/services/aiApi'
 import { History, KeyRound, LogOut, Pencil } from 'lucide-react'
 
 function ChangeNameDialog({
@@ -100,12 +101,17 @@ export default function UserMenu({
   onOpenTrash: () => void
 }) {
   const identity = useStore($identity)
+  const aiUsage = useStore($aiUsage)
   const [theme, setThemeState] = useState<Theme>('system')
   const [changeNameOpen, setChangeNameOpen] = useState(false)
 
   useEffect(() => {
     setThemeState(getStoredTheme())
     return watchSystemTheme()
+  }, [])
+
+  useEffect(() => {
+    fetchAiUsage().catch(() => {})
   }, [])
 
   if (!identity) return null
@@ -140,6 +146,27 @@ export default function UserMenu({
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        {aiUsage && (
+          <>
+            <div className="px-1.5 py-1.5">
+              <div className="mb-1.5 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">AI requests today</span>
+                <span className="font-medium">
+                  {aiUsage.used} / {aiUsage.limit}
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    aiUsage.used >= aiUsage.limit ? 'bg-destructive' : 'bg-violet-400'
+                  }`}
+                  style={{ width: `${Math.min(100, (aiUsage.used / aiUsage.limit) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
           <DropdownMenuLabel>Appearance</DropdownMenuLabel>
           <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>

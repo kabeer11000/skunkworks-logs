@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
+import { consumeAiUsage } from '@/lib/couchdb-admin'
 import { chatComplete } from '@/lib/minimax'
 import { escapeHtml } from '@/lib/htmlEscape'
 
@@ -8,6 +9,11 @@ export const prerender = false
 export const POST: APIRoute = async ({ request }) => {
   const caller = await requireAuth(request)
   if (!caller) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+  const usage = await consumeAiUsage(caller.email)
+  if (!usage) {
+    return new Response(JSON.stringify({ error: 'Daily AI limit reached. Try again tomorrow.' }), { status: 429 })
+  }
 
   const body = await request.json().catch(() => ({}))
   const text = typeof body.text === 'string' ? body.text.trim() : ''
@@ -23,7 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
   ])
 
   return new Response(
-    JSON.stringify({ text: escapeHtml(raw.trim()) }),
+    JSON.stringify({ text: escapeHtml(raw.trim()), usage }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   )
 }

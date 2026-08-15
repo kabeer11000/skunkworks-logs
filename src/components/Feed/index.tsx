@@ -91,6 +91,7 @@ export default function Feed({ dbName }: { dbName: string }) {
   const [initialLoaded, setInitialLoaded] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [summarizingKey, setSummarizingKey] = useState<string | null>(null)
+  const [summarizeError, setSummarizeError] = useState<string | null>(null)
   const [comments, setComments] = useState<CommentDoc[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveStateResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -639,11 +640,14 @@ export default function Feed({ dbName }: { dbName: string }) {
 
   const handleSummarize = async (key: string, entryIds: string[]) => {
     setSummarizingKey(key)
+    setSummarizeError(null)
     try {
       await summarizeEntries(dbName, entryIds)
-    } catch {
-      // Best-effort — the skeleton just disappears; nothing was
-      // optimistically inserted into the doc, so there's nothing to undo.
+    } catch (err: any) {
+      // Nothing was optimistically inserted into the doc, so there's
+      // nothing to undo — but the user still needs to know why (e.g. the
+      // daily AI limit was reached), not just watch the skeleton vanish.
+      setSummarizeError(err?.message || 'Failed to summarize')
     } finally {
       setSummarizingKey(null)
     }
@@ -683,6 +687,14 @@ export default function Feed({ dbName }: { dbName: string }) {
                   <div className="ai-shimmer h-2.5 w-3/4 rounded-full" />
                   <div className="ai-shimmer h-2.5 w-1/2 rounded-full" />
                 </div>
+              </div>
+            )}
+            {summarizeError && (
+              <div className="mb-1.5 flex items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {summarizeError}
+                <button type="button" className="shrink-0 text-xs underline" onClick={() => setSummarizeError(null)}>
+                  Dismiss
+                </button>
               </div>
             )}
             {!initialLoaded && (

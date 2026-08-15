@@ -81,6 +81,7 @@ export function EditorToolbar({
   }, [anchorRef])
 
   const [cleaning, setCleaning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleCleanup = async () => {
     const found = currentBlock(editor)
@@ -100,8 +101,12 @@ export function EditorToolbar({
         const to = target.pos + target.node.nodeSize - 1
         editor.chain().focus().insertContentAt({ from, to }, cleaned).run()
       }
-    } catch {
-      // Best-effort — leave the original text untouched on failure.
+    } catch (err: any) {
+      // Leave the original text untouched on failure, but surface why —
+      // silently eating a "daily limit reached" error left users with no
+      // idea the button had stopped working for the rest of the day.
+      setError(err?.message || 'Failed to refine')
+      setTimeout(() => setError(null), 4000)
     } finally {
       const target = findBlockByEntryId(editor, entryId)
       if (target) setCleaningFlag(editor, target.pos, false)
@@ -116,6 +121,11 @@ export function EditorToolbar({
       className="fixed bottom-8 z-40 flex items-center gap-1 rounded-full border bg-background/95 px-2 py-1.5 shadow-md backdrop-blur-sm"
       style={{ left: center, transform: 'translateX(-50%)' }}
     >
+      {error && (
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border bg-background px-2.5 py-1 text-xs text-destructive shadow-sm">
+          {error}
+        </div>
+      )}
       {BUTTONS.map(({ mark, icon: Icon, label, run }) => (
         <button
           key={mark}

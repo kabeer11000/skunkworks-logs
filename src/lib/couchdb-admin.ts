@@ -322,6 +322,60 @@ export async function touchApiTokenLastUsed(email: string, token: string) {
   ).catch(() => {})
 }
 
+// Per-account daily cap on AI-calling endpoints (refine, summarize) — the
+// single rate limiter every AI route shares, rather than each route
+// tracking its own counter. Resets at UTC midnight; a stale count from a
+// previous day is just overwritten on next use rather than requiring a
+// separate cron/sweep.
+const AI_DAILY_LIMIT = 20
+
+export interface AiUsage {
+  used: number
+  limit: number
+  resetsAt: number // ms epoch, start of next UTC day
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function nextUtcMidnight(): number {
+  const d = new Date()
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)
+}
+
+export async function getAiUsage(email: string): Promise<AiUsage> {
+  const doc = await getAdminDoc(DIRECTORY_DB, `user:${email}`)
+  const usage = doc?.aiUsage
+  const used = usage?.date === todayUtc() ? usage.count : 0
+  return { used, limit: AI_DAILY_LIMIT, resetsAt: nextUtcMidnight() }
+}
+
+// Get-check-increment with the same bounded 409-retry shape as
+// updateAdminDoc, but needs its own loop rather than reusing that helper
+// directly — updateAdminDoc's mutate callback has no way to signal "stop,
+// don't write" once the limit is already reached. Returns null (no write
+// performed) once the caller is at or over the daily limit.
+export async function consumeAiUsage(email: string): Promise<AiUsage | null> {
+  const today = todayUtc()
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const existing = await getAdminDoc(DIRECTORY_DB, `user:${email}`)
+    const doc = existing ?? { _id: `user:${email}`, type: 'directory', drains: [] }
+    const usage = doc.aiUsage?.date === today ? doc.aiUsage : { date: today, count: 0 }
+    if (usage.count >= AI_DAILY_LIMIT) {
+      return null
+    }
+    const nextUsage = { date: today, count: usage.count + 1 }
+    const res = await adminFetch(`/${DIRECTORY_DB}/${encodeURIComponent(`user:${email}`)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...doc, aiUsage: nextUsage }),
+    })
+    if (res.ok) return { used: nextUsage.count, limit: AI_DAILY_LIMIT, resetsAt: nextUtcMidnight() }
+    if (res.status !== 409) throw new Error(`Failed to update AI usage (${res.status})`)
+  }
+  throw new Error('Failed to update AI usage after retries')
+}
+
 // Both public share links (`/p/:token`) and GitHub ingestion URLs
 // (`/api/ingest/:token`) need to resolve a bare token back to a dbName
 // without knowing it in advance — no per-drain database can answer "which
