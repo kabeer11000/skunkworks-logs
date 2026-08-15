@@ -10,14 +10,26 @@ import DocsLayout from '@/components/DocsLayout.astro'
     in the same timeline as everything else, never a separate audit log.
   </p>
 
-  <h2>Add the server</h2>
-  <p>Add this to your MCP client's config — Claude Desktop's <code>claude_desktop_config.json</code>, or Claude Code's <code>.claude/settings.json</code> under <code>mcpServers</code>:</p>
+  <h2>Install as a Claude skill (easiest)</h2>
+  <p>
+    The Drains skill is a thin layer on top of the same MCP server below — it depends on the MCP
+    connection, it doesn't replace it. Installing it sets that connection up for you:
+  </p>
+
+  <pre><code>npx skills add https://github.com/drains-dev/claude-plugin --skill drains</code></pre>
+
+  <p>You'll still need a token (below) — set it as
+  <code>DRAINS_API_TOKEN</code> in your environment.</p>
+
+  <h2>Add the server manually</h2>
+  <p>Skip the skill and configure this MCP server directly — needed if you're on a different MCP client, or want to wire it up yourself. Add this to your MCP client's config — Claude Desktop's <code>claude_desktop_config.json</code>, or Claude Code's <code>.claude/settings.json</code> under <code>mcpServers</code>:</p>
 
   <pre><code>{`{
   "mcpServers": {
     "drains": {
       "command": "npx",
-      "args": ["-y", "github:drains-dev/mcp"]
+      "args": ["-y", "github:drains-dev/mcp"],
+      "env": { "DRAINS_API_URL": "https://drains.dev", "DRAINS_API_TOKEN": "<your-token>" }
     }
   }
 }`}</code></pre>

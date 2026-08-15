@@ -14,18 +14,35 @@ to a drain.
   <token name>") and appear in the same timeline as everything else —
   not a separate audit log.
 
-## Connect via MCP
+## Install as a Claude skill (easiest)
 
-Add this to your MCP client's config (Claude Desktop's
-`claude_desktop_config.json`, or Claude Code's `.claude/settings.json`
-under `mcpServers`):
+The Drains skill is a thin layer on top of the same MCP server below — it
+depends on the MCP connection, it doesn't replace it. Installing it sets that
+connection up for you:
+
+```sh
+npx skills add https://github.com/drains-dev/claude-plugin --skill drains
+```
+
+Claude then reads a project's drain for context before starting work, and
+appends entries as it goes. You still need a token (see below) — set it as
+`DRAINS_API_TOKEN` (and `DRAINS_API_URL` if you're not using the default
+host) in your environment.
+
+## Connect via MCP (manual)
+
+Skip the skill and configure this MCP server directly — needed if you're on
+a different MCP client, or want to wire it up yourself. Add this to your MCP
+client's config (Claude Desktop's `claude_desktop_config.json`, or Claude
+Code's `.claude/settings.json` under `mcpServers`):
 
 ```json
 {
   "mcpServers": {
     "drains": {
       "command": "npx",
-      "args": ["-y", "github:drains-dev/mcp"]
+      "args": ["-y", "github:drains-dev/mcp"],
+      "env": { "DRAINS_API_URL": "https://drains.dev", "DRAINS_API_TOKEN": "<your-token>" }
     }
   }
 }

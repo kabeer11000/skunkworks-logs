@@ -107,9 +107,33 @@ export function ApiTokensDialog({ open, onOpenChange }: { open: boolean; onOpenC
               </Button>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add this to your MCP client's config (Claude Desktop's <code>claude_desktop_config.json</code>, or
-              Claude Code's <code>.claude/settings.json</code> under <code>mcpServers</code>) — no install step,{' '}
-              <code>npx</code> fetches it straight from GitHub on first run:
+              Using Claude Code? The Drains skill is a thin layer on top of the same MCP server below —
+              installing it sets that connection up for you. Set <code>DRAINS_API_TOKEN</code> to the token
+              above:
+            </p>
+            <div className="flex gap-1.5">
+              <pre className="max-h-20 flex-1 overflow-auto rounded-md bg-muted p-2 text-[10px] text-muted-foreground">
+                npx skills add https://github.com/drains-dev/claude-plugin --skill drains
+              </pre>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  navigator.clipboard.writeText(
+                    'npx skills add https://github.com/drains-dev/claude-plugin --skill drains'
+                  )
+                }
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Skip the skill and configure that MCP server directly — needed on a different MCP client, or
+              to wire it up yourself: add this to your MCP client's config (Claude Desktop's{' '}
+              <code>claude_desktop_config.json</code>, or Claude Code's <code>.claude/settings.json</code> under{' '}
+              <code>mcpServers</code>) — no install step, <code>npx</code> fetches it straight from GitHub on first
+              run:
             </p>
             <div className="flex gap-1.5">
               <pre className="max-h-40 flex-1 overflow-auto rounded-md bg-muted p-2 text-[10px] text-muted-foreground">
