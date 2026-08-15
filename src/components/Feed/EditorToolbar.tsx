@@ -147,8 +147,8 @@ export function EditorToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={handleCleanup}
         disabled={cleaning}
-        className={`flex size-7 items-center justify-center rounded-full text-violet-500 outline-none transition-all hover:scale-110 hover:bg-violet-100 hover:text-violet-600 focus-visible:ring-2 focus-visible:ring-violet-400 ${
-          cleaning ? 'bg-violet-100' : ''
+        className={`flex size-7 items-center justify-center rounded-full text-violet-500 outline-none transition-all hover:scale-110 hover:bg-violet-100 hover:text-violet-600 focus-visible:ring-2 focus-visible:ring-violet-400 dark:text-violet-400 dark:hover:bg-violet-500/20 dark:hover:text-violet-300 ${
+          cleaning ? 'bg-violet-100 dark:bg-violet-500/20' : ''
         }`}
       >
         {cleaning ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />}

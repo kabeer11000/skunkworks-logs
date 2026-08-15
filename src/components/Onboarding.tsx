@@ -67,7 +67,7 @@ export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () =>
     <div className="flex h-screen w-screen items-center justify-center p-4">
       <div className="flex max-h-[700px] w-full max-w-5xl overflow-hidden rounded-2xl">
         {/* Left panel — branding */}
-        <div className="hidden w-1/2 flex-col justify-between border-r bg-white p-12 text-neutral-900 md:flex">
+        <div className="hidden w-1/2 flex-col justify-between border-r bg-card p-12 text-card-foreground md:flex">
           <div>
             <img src="/logo/skunkworks-transparent.png" className="h-10 w-10" alt="" />
             <h1 className="mt-8 text-[2.75rem] font-bold leading-[1.1] tracking-tight">
@@ -77,25 +77,25 @@ export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () =>
               <br />
               organized.
             </h1>
-            <p className="mt-6 text-[0.8125rem] leading-relaxed text-neutral-500">
+            <p className="mt-6 text-[0.8125rem] leading-relaxed text-muted-foreground">
               SkunkWorks Logs is a personal drain for every release, incident, and decision —
               offline-first, syncable, and built for engineers who ship.
             </p>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-2.5 text-[0.8125rem] text-neutral-400">
+            <div className="flex items-center gap-2.5 text-[0.8125rem] text-muted-foreground">
               <svg className="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
                 <path d="M6.5 12L2 7.5l1.5-1.5L6.5 9l6-6 1.5 1.5L6.5 12z" fill="currentColor"/>
               </svg>
               Offline-first, syncable across devices
             </div>
-            <div className="flex items-center gap-2.5 text-[0.8125rem] text-neutral-400">
+            <div className="flex items-center gap-2.5 text-[0.8125rem] text-muted-foreground">
               <svg className="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
                 <path d="M6.5 12L2 7.5l1.5-1.5L6.5 9l6-6 1.5 1.5L6.5 12z" fill="currentColor"/>
               </svg>
               Per-drain encryption for private drains
             </div>
-            <div className="flex items-center gap-2.5 text-[0.8125rem] text-neutral-400">
+            <div className="flex items-center gap-2.5 text-[0.8125rem] text-muted-foreground">
               <svg className="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
                 <path d="M6.5 12L2 7.5l1.5-1.5L6.5 9l6-6 1.5 1.5L6.5 12z" fill="currentColor"/>
               </svg>

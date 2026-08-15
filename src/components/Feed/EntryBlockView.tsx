@@ -50,7 +50,7 @@ export function EntryBlockView({ node, deleteNode }: NodeViewProps) {
     <NodeViewWrapper
       as="p"
       data-entry-id={entryId}
-      className={`group relative ${isComposer ? 'border border-dashed border-neutral-300' : ''}`}
+      className={`group relative ${isComposer ? 'border border-dashed border-border' : ''}`}
       style={{
         // The placeholder below is position: absolute (so it never
         // intercepts clicks meant for the empty editable content beneath
@@ -59,9 +59,9 @@ export function EntryBlockView({ node, deleteNode }: NodeViewProps) {
         // text overflows past a box sized only for one empty line.
         minHeight: isComposer ? 68 : undefined,
         marginBottom: isClaimed || isNestedSummary ? 2 : undefined,
-        backgroundColor: isComposer || isSummary ? undefined : `color-mix(in srgb, ${color} 12%, white)`,
+        backgroundColor: isComposer || isSummary ? undefined : `color-mix(in srgb, ${color} 12%, var(--background))`,
         backgroundImage: isSummary
-          ? 'linear-gradient(to right, color-mix(in srgb, #7c3aed 12%, white), white)'
+          ? 'linear-gradient(to right, color-mix(in srgb, #7c3aed 12%, var(--background)), var(--background))'
           : undefined,
       }}
     >
@@ -79,19 +79,19 @@ export function EntryBlockView({ node, deleteNode }: NodeViewProps) {
         // last in the group, instead of dangling past the end.
         <span
           contentEditable={false}
-          className={`pointer-events-none absolute top-0 -left-2.5 w-0.5 rounded-full bg-violet-300 ${
+          className={`pointer-events-none absolute top-0 -left-2.5 w-0.5 rounded-full bg-violet-300 dark:bg-violet-500 ${
             isLastInGroup ? 'h-1/2' : 'bottom-0'
           }`}
         >
           {isLastInGroup && (
-            <span className="absolute -left-0.5 top-full size-1.5 rounded-full bg-violet-300" />
+            <span className="absolute -left-0.5 top-full size-1.5 rounded-full bg-violet-300 dark:bg-violet-500" />
           )}
         </span>
       )}
       {isSummary && !isNestedSummary && (
         <span
           contentEditable={false}
-          className="pointer-events-none absolute -top-5 left-2 flex items-center gap-1 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-600"
+          className="pointer-events-none absolute -top-5 left-2 flex items-center gap-1 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
         >
           <Sparkles className="size-2.5" />
           AI Summary
@@ -135,7 +135,7 @@ export function EntryBlockView({ node, deleteNode }: NodeViewProps) {
           </div>
           <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
             {viaToken && (
-              <p className="flex items-center gap-1 text-violet-600">
+              <p className="flex items-center gap-1 text-violet-600 dark:text-violet-300">
                 <Bot className="size-3" />
                 via {viaToken}
               </p>

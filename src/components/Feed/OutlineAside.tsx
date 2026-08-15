@@ -95,7 +95,7 @@ export function OutlineAside({
               title="Summarize this day"
               onClick={() => onSummarize(d.key, d.entryIds)}
               disabled={summarizingKey === d.key}
-              className="rounded-md p-1 text-violet-400 opacity-60 outline-none transition-all hover:bg-violet-100 hover:text-violet-600 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-violet-400 group-hover/day:opacity-100"
+              className="rounded-md p-1 text-violet-400 opacity-60 outline-none transition-all hover:bg-violet-100 hover:text-violet-600 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-violet-400 group-hover/day:opacity-100 dark:hover:bg-violet-500/20 dark:hover:text-violet-300"
             >
               {summarizingKey === d.key ? (
                 <Loader2 className="size-3 animate-spin" />

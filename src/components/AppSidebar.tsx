@@ -77,7 +77,7 @@ function DrainCard({
         triggerRef.current?.click()
       }}
       className={`group relative mb-2 flex flex-col gap-1 break-inside-avoid rounded-lg border p-3 transition-opacity transition-colors ${FOCUS_RING} ${
-        active ? 'border-neutral-300 bg-secondary' : 'border-neutral-200 hover:bg-secondary/70'
+        active ? 'border-ring bg-secondary' : 'border-border hover:bg-secondary/70'
       } ${dimmed ? 'opacity-40' : ''}`}
     >
       <div className="flex items-start justify-between gap-1.5">
@@ -86,9 +86,9 @@ function DrainCard({
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {drain.visibility === 'shared' ? (
-            <Globe className="size-3.5 text-neutral-400" />
+            <Globe className="size-3.5 text-muted-foreground" />
           ) : (
-            <Lock className="size-3.5 text-neutral-400" />
+            <Lock className="size-3.5 text-muted-foreground" />
           )}
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -99,13 +99,13 @@ function DrainCard({
                     e.preventDefault()
                     e.stopPropagation()
                   }}
-                  className={`rounded p-1 hover:bg-neutral-100 ${FOCUS_RING}`}
+                  className={`rounded p-1 hover:bg-secondary ${FOCUS_RING}`}
                 />
               }
             >
-              <MoreHorizontal className="size-4 text-neutral-400" />
+              <MoreHorizontal className="size-4 text-muted-foreground" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={() => onEdit(drain.dbName)}>
                 <Pencil className="size-3.5" />
                 Edit
@@ -155,7 +155,7 @@ function DrainCard({
       )}
 
       <div className="flex items-end justify-between gap-1.5 pt-1">
-        <span className="text-[0.6875rem] text-neutral-400">
+        <span className="text-[0.6875rem] text-muted-foreground">
           {drain.visibility === 'shared' ? 'Shared' : 'Private'}
         </span>
         {drain.visibility === 'shared' && <AvatarGroup emails={members} max={3} />}
@@ -246,10 +246,10 @@ export default function AppSidebar() {
       <aside className="flex h-full w-[30%] flex-col rounded-xl bg-background">
         {/* Header */}
         <div className="relative flex h-14 shrink-0 items-center border-b px-4">
-          <img src="/logo/skunkworks-transparent.png" className="h-6 w-6" alt="" />
+          <img src="/logo/skunkworks-transparent.png" className="h-6 w-6 rounded-md bg-white p-0.5" alt="" />
           <a
             href="/"
-            className={`ml-2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-neutral-200 hover:bg-secondary ${FOCUS_RING}`}
+            className={`ml-2 rounded-full border border-transparent px-3 py-1.5 font-mono text-sm font-medium transition-colors hover:border-border hover:bg-secondary ${FOCUS_RING}`}
           >
             skunkworks/logs
           </a>
@@ -285,15 +285,9 @@ export default function AppSidebar() {
         <ApiTokensDialog open={tokensOpen} onOpenChange={setTokensOpen} />
         <TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
 
-        {/* Drains */}
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Drains
-          </div>
-          <div className="mb-3 text-xs text-neutral-400">Your personal engineering log</div>
-
+        <div className="feed-scroll flex flex-1 flex-col overflow-y-auto px-4 py-4">
           {allTags.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-1.5">
+            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-3 bg-background px-4 pt-0 pb-3 flex flex-wrap gap-1.5">
               {allTags.map((tag) => (
                 <button
                   key={tag}
@@ -301,8 +295,8 @@ export default function AppSidebar() {
                   onClick={() => toggleTag(tag)}
                   className={`rounded-full border px-2 py-0.5 text-[0.6875rem] transition-colors ${FOCUS_RING} ${
                     activeTags.has(tag)
-                      ? 'border-neutral-800 bg-neutral-800 text-white'
-                      : 'border-neutral-200 text-muted-foreground hover:bg-secondary'
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border text-muted-foreground hover:bg-secondary'
                   }`}
                 >
                   {tag}
@@ -337,7 +331,7 @@ export default function AppSidebar() {
                 })}
               </div>
               {drains.length === 0 && (
-                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-dashed border-neutral-200 px-4 py-8 text-center">
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-center">
                   <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
                     <Inbox className="size-5 text-muted-foreground" />
                   </div>

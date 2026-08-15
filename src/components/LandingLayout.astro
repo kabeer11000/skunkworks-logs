@@ -1,4 +1,6 @@
 ---
+import "../styles/global.css"
+
 interface Props {
   title?: string
   description?: string
@@ -26,11 +28,13 @@ const {
     <style is:global>
       :root {
         --font-sans: 'Inter', sans-serif;
+        /* temp dark mode: light overrides commented out, uses .dark vars from global.css
         --background: oklch(1 0 0);
         --foreground: oklch(0.145 0 0);
         --muted: oklch(0.97 0 0);
         --muted-foreground: oklch(0.556 0 0);
         --border: oklch(0.922 0 0);
+        */
         --radius: 0.75rem;
       }
 

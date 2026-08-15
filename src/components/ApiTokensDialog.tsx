@@ -91,8 +91,8 @@ export function ApiTokensDialog({ open, onOpenChange }: { open: boolean; onOpenC
         </DialogHeader>
 
         {justCreated ? (
-          <div className="grid gap-2 rounded-md border border-violet-200 bg-violet-50 p-3">
-            <p className="text-xs font-medium text-violet-700">
+          <div className="grid gap-2 rounded-md border border-violet-200 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-500/10">
+            <p className="text-xs font-medium text-violet-700 dark:text-violet-300">
               Copy this token now — it won't be shown again.
             </p>
             <div className="flex gap-1.5">
@@ -112,7 +112,7 @@ export function ApiTokensDialog({ open, onOpenChange }: { open: boolean; onOpenC
               <code>npx</code> fetches it straight from GitHub on first run:
             </p>
             <div className="flex gap-1.5">
-              <pre className="max-h-40 flex-1 overflow-auto rounded-md bg-neutral-900 p-2 text-[10px] text-neutral-100">
+              <pre className="max-h-40 flex-1 overflow-auto rounded-md bg-muted p-2 text-[10px] text-muted-foreground">
                 {mcpConfigSnippet(origin, justCreated)}
               </pre>
               <Button

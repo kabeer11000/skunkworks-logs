@@ -41,7 +41,7 @@ export default function DrainsGrid() {
             <a
               key={drain.id}
               href={href}
-              className="group flex flex-col gap-2 rounded-xl border p-4 text-left transition-colors hover:border-neutral-300 hover:bg-muted/40"
+              className="group flex flex-col gap-2 rounded-xl border p-4 text-left transition-colors hover:border-ring hover:bg-muted/40"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="line-clamp-2 font-medium leading-snug">

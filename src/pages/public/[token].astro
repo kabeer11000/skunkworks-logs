@@ -35,7 +35,7 @@ function safeColor(val: unknown) {
 				{entries.map((entry) => (
 					<p
 						class="mb-1.5 rounded-lg p-3"
-						style={`background-color: color-mix(in srgb, ${safeColor(entry.updatedByColor)} 12%, white)`}
+						style={`background-color: color-mix(in srgb, ${safeColor(entry.updatedByColor)} 12%, var(--background))`}
 						set:html={entry.content}
 					/>
 				))}

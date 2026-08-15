@@ -12,7 +12,10 @@ function colorsForEmail(email: string) {
   let hash = 0
   for (let i = 0; i < email.length; i++) hash = (hash * 31 + email.charCodeAt(i)) | 0
   const hue = Math.abs(hash) % 360
-  return { text: `hsl(${hue}, 35%, 45%)`, background: `hsl(${hue}, 35%, 45%, 0.13)` }
+  return {
+    text: `light-dark(hsl(${hue}, 35%, 45%), hsl(${hue}, 55%, 75%))`,
+    background: `light-dark(hsl(${hue}, 35%, 45%, 0.13), hsl(${hue}, 45%, 65%, 0.2))`,
+  }
 }
 
 // Cached per drain for the lifetime of this editor instance — members don't

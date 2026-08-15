@@ -11,7 +11,7 @@ const STATUS_META: Record<Status, { dot: string; label: string; description: str
 	active: { dot: "bg-green-400", label: "synced", description: "Changes are syncing live with the server." },
 	paused: { dot: "bg-yellow-400", label: "paused", description: "Up to date. Waiting for new changes to sync." },
 	error: { dot: "bg-red-400", label: "error", description: "Sync ran into an error and may be retrying." },
-	offline: { dot: "bg-neutral-300", label: "offline", description: "Couldn't reach the sync server. Your changes are saved locally." },
+	offline: { dot: "bg-neutral-400 dark:bg-neutral-600", label: "offline", description: "Couldn't reach the sync server. Your changes are saved locally." },
 };
 
 export default function SyncIndicator({ dbName }: { dbName: string }) {
