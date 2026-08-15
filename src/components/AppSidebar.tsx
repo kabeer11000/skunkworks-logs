@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search } from 'lucide-react'
+import { $commandPaletteOpen } from './CommandPalette'
+import { RecentActivity } from './RecentActivity'
 import { exportDrainMarkdown } from '@/utils/exportDrain'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
@@ -247,7 +249,15 @@ export default function AppSidebar() {
           >
             skunkworks/logs
           </a>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              title="Search (Ctrl/Cmd+K)"
+              onClick={() => $commandPaletteOpen.set(true)}
+              className={`flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
+            >
+              <Search className="size-4" />
+            </button>
             <NewDrainDialog />
           </div>
         </div>
@@ -320,6 +330,8 @@ export default function AppSidebar() {
             </>
           )}
         </div>
+
+        <RecentActivity />
 
         {/* Animated dog sprite — bottom left, walk cycle in place. Sheet is
             an 11-row x 4-col grid of 128x128 frames (not a single vertical

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { atom } from 'nanostores'
 import { useStore } from '@nanostores/react'
 import { $drains } from '@/helpers/drains'
 import { getDrainDb } from '@/services/db'
@@ -23,12 +24,17 @@ interface EntryResult {
   snippet: string
 }
 
+// Shared so a sidebar search button (AppSidebar.tsx) can open the palette
+// too, not just the Cmd+K shortcut.
+export const $commandPaletteOpen = atom(false)
+
 // Only searches entries already synced into each drain's local PouchDB —
 // consistent with the app's local-first positioning, but means a drain
 // never opened on this device won't have anything to search yet.
 export function CommandPalette() {
   const drains = useStore($drains)
-  const [open, setOpen] = useState(false)
+  const open = useStore($commandPaletteOpen)
+  const setOpen = (next: boolean) => $commandPaletteOpen.set(next)
   const [query, setQuery] = useState('')
   const [entryResults, setEntryResults] = useState<EntryResult[]>([])
 
@@ -36,7 +42,7 @@ export function CommandPalette() {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setOpen((o) => !o)
+        $commandPaletteOpen.set(!$commandPaletteOpen.get())
       }
     }
     document.addEventListener('keydown', onKeyDown)
@@ -103,6 +109,7 @@ export function CommandPalette() {
       onOpenChange={setOpen}
       title="Search"
       description="Search drains and entries"
+      className="sm:max-w-2xl"
     >
       <Command shouldFilter={false}>
         <CommandInput
@@ -110,7 +117,7 @@ export function CommandPalette() {
           value={query}
           onValueChange={setQuery}
         />
-        <CommandList>
+        <CommandList className="max-h-[26rem]">
           <CommandEmpty>No results.</CommandEmpty>
           {drainMatches.length > 0 && (
             <CommandGroup heading="Drains">
