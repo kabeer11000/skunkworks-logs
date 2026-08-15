@@ -28,7 +28,7 @@ function mcpConfigSnippet(origin: string, token: string) {
         drains: {
           command: 'npx',
           args: ['-y', 'github:drains-dev/mcp'],
-          env: { SKUNKWORKS_API_URL: origin, SKUNKWORKS_API_TOKEN: token },
+          env: { DRAINS_API_URL: origin, DRAINS_API_TOKEN: token },
         },
       },
     },
