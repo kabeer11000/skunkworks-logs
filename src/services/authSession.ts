@@ -33,3 +33,9 @@ export function clearAuthCredential() {
   if (typeof sessionStorage === 'undefined') return
   sessionStorage.removeItem(KEY)
 }
+
+export function logout() {
+  clearAuthCredential()
+  document.cookie = 'sk_identity=; path=/; max-age=0'
+  window.location.href = '/'
+}

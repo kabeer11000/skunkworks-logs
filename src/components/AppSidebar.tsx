@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search, KeyRound, History } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search } from 'lucide-react'
 import { $commandPaletteOpen } from './CommandPalette'
 import { RecentActivity } from './RecentActivity'
 import { ApiTokensDialog } from './ApiTokensDialog'
@@ -31,6 +31,7 @@ import NewDrainDialog from './NewDrainDialog'
 import RenameDrainDialog from './RenameDrainDialog'
 import { AvatarGroup } from './AvatarGroup'
 import { listDrainMembers } from '@/services/drainsApi'
+import UserMenu from './UserMenu'
 
 const FOCUS_RING = 'outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
@@ -179,6 +180,7 @@ export default function AppSidebar() {
     isOwner: boolean
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [tokensOpen, setTokensOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
@@ -230,9 +232,14 @@ export default function AppSidebar() {
   }
 
   const handleDeleteConfirmed = async () => {
-    if (!deleteTarget) return
-    await deleteDrain(deleteTarget.dbName)
-    setDeleteTarget(null)
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    try {
+      await deleteDrain(deleteTarget.dbName)
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleCopyLink = (dbName: string) => {
@@ -253,7 +260,7 @@ export default function AppSidebar() {
           >
             skunkworks/logs
           </a>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
               title="Search (Ctrl/Cmd+K)"
@@ -262,22 +269,7 @@ export default function AppSidebar() {
             >
               <Search className="size-4" />
             </button>
-            <button
-              type="button"
-              title="API tokens"
-              onClick={() => setTokensOpen(true)}
-              className={`flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
-            >
-              <KeyRound className="size-4" />
-            </button>
-            <button
-              type="button"
-              title="Recently deleted"
-              onClick={() => setTrashOpen(true)}
-              className={`flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
-            >
-              <History className="size-4" />
-            </button>
+            <UserMenu onOpenTokens={() => setTokensOpen(true)} onOpenTrash={() => setTrashOpen(true)} />
             <NewDrainDialog />
           </div>
         </div>
@@ -386,7 +378,7 @@ export default function AppSidebar() {
       )}
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{deleteTarget?.title}"?</AlertDialogTitle>
@@ -396,9 +388,9 @@ export default function AppSidebar() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDeleteConfirmed}>
-              Delete
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={deleting} onClick={handleDeleteConfirmed}>
+              {deleting ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

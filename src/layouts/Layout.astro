@@ -12,6 +12,13 @@ import { ClientRouter } from "astro:transitions";
 		<link rel="apple-touch-icon" href="/logo/skunkworks-transparent.png" />
 		<meta name="generator" content={Astro.generator} />
 		<title>SkunkWorks Logs</title>
+		<script is:inline>
+			(function () {
+				var t = localStorage.getItem('sk_theme') || 'system';
+				var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+				document.documentElement.classList.toggle('dark', dark);
+			})();
+		</script>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link

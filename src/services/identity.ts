@@ -1,4 +1,5 @@
 import { atom } from "nanostores";
+import { authHeader, parseErrorOr } from "./apiAuth";
 const IDENTITY_KEY = 'sk_identity';
 
 export interface Identity {
@@ -50,6 +51,17 @@ export function getStoredIdentityServer(cookieHeaderString: string | null): Iden
     }
   }
   return null;
+}
+
+export async function updateDisplayName(name: string): Promise<Identity> {
+  const res = await fetch('/api/auth/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+    body: JSON.stringify({ name }),
+  });
+  const { identity } = await parseErrorOr<{ identity: Identity }>(res, 'Failed to update name');
+  $identity.set(identity);
+  return identity;
 }
 
 export const $identity = atom < Identity > (null);

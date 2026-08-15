@@ -1,0 +1,172 @@
+import { useEffect, useState } from 'react'
+import { useStore } from '@nanostores/react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { $identity, updateDisplayName } from '@/services/identity'
+import { logout } from '@/services/authSession'
+import { getStoredTheme, setTheme, watchSystemTheme, type Theme } from '@/services/theme'
+import { History, KeyRound, LogOut, Pencil } from 'lucide-react'
+
+function ChangeNameDialog({
+  open,
+  onOpenChange,
+  currentName,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  currentName: string
+}) {
+  const [name, setName] = useState(currentName)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setName(currentName)
+      setError('')
+    }
+  }, [open, currentName])
+
+  const save = async () => {
+    const trimmed = name.trim()
+    if (trimmed.length < 2) {
+      setError('Name must be at least 2 characters')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      await updateDisplayName(trimmed)
+      onOpenChange(false)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update name')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change your name</DialogTitle>
+          <DialogDescription>This is how you'll appear to others across shared drains.</DialogDescription>
+        </DialogHeader>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && save()}
+          placeholder="Ada Lovelace"
+          autoFocus
+        />
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export default function UserMenu({
+  onOpenTokens,
+  onOpenTrash,
+}: {
+  onOpenTokens: () => void
+  onOpenTrash: () => void
+}) {
+  const identity = useStore($identity)
+  const [theme, setThemeState] = useState<Theme>('system')
+  const [changeNameOpen, setChangeNameOpen] = useState(false)
+
+  useEffect(() => {
+    setThemeState(getStoredTheme())
+    return watchSystemTheme()
+  }, [])
+
+  if (!identity) return null
+
+  const handleThemeChange = (value: string) => {
+    const next = value as Theme
+    setThemeState(next)
+    setTheme(next)
+  }
+
+  return (
+    <>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            title={identity.name || identity.email}
+            style={{ background: identity.color }}
+            className="m-0 flex size-8 shrink-0 items-center justify-center rounded-full p-0 text-xs font-medium text-white outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        }
+      >
+        {identity.name?.[0]?.toUpperCase() || identity.email[0]?.toUpperCase()}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col items-start gap-0.5 py-1.5">
+            <span className="truncate text-sm font-medium text-foreground">{identity.name || identity.email}</span>
+            <span className="truncate text-xs text-muted-foreground">{identity.email}</span>
+            <span className="truncate font-mono text-[10px] text-muted-foreground">{identity.publicUserId}</span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+          <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+          <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setChangeNameOpen(true)}>
+          <Pencil className="size-3.5" />
+          Change name
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenTokens}>
+          <KeyRound className="size-3.5" />
+          API tokens
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenTrash}>
+          <History className="size-3.5" />
+          Recently deleted
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={logout}>
+          <LogOut className="size-3.5" />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <ChangeNameDialog open={changeNameOpen} onOpenChange={setChangeNameOpen} currentName={identity.name} />
+    </>
+  )
+}
