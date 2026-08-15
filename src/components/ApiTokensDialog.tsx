@@ -12,13 +12,17 @@ import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
 import { listApiTokens, createApiToken, revokeApiToken, type ApiToken } from '@/services/apiTokens'
 
+// Installed straight from this repo's mcp-server/ subfolder via npx's
+// github: + path: support — no local clone, no absolute path, no npm
+// publish. Confirmed directly against npm's own source (npm-package-arg's
+// gitSubdir handling) before relying on it, not assumed.
 function mcpConfigSnippet(origin: string, token: string) {
   return JSON.stringify(
     {
       mcpServers: {
         'skunkworks-logs': {
-          command: 'node',
-          args: ['/absolute/path/to/mcp-server/index.js'],
+          command: 'npx',
+          args: ['-y', 'github:kabeer11000/skunkworks-logs#master::path:mcp-server'],
           env: { SKUNKWORKS_API_URL: origin, SKUNKWORKS_API_TOKEN: token },
         },
       },
@@ -98,10 +102,9 @@ export function ApiTokensDialog({ open, onOpenChange }: { open: boolean; onOpenC
               </Button>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              To use it with the MCP server: clone/download the <code>mcp-server</code> folder from the repo, run{' '}
-              <code>npm install</code> in it, then add this to your MCP client's config (Claude Desktop's{' '}
-              <code>claude_desktop_config.json</code>, or Claude Code's <code>.claude/settings.json</code> under{' '}
-              <code>mcpServers</code>) — swap in the real path to <code>index.js</code>:
+              Add this to your MCP client's config (Claude Desktop's <code>claude_desktop_config.json</code>, or
+              Claude Code's <code>.claude/settings.json</code> under <code>mcpServers</code>) — no install step,{' '}
+              <code>npx</code> fetches it straight from GitHub on first run:
             </p>
             <div className="flex gap-1.5">
               <pre className="max-h-40 flex-1 overflow-auto rounded-md bg-neutral-900 p-2 text-[10px] text-neutral-100">
@@ -122,8 +125,8 @@ export function ApiTokensDialog({ open, onOpenChange }: { open: boolean; onOpenC
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Create a token, then follow the setup steps shown here to connect it to the MCP server (see this
-            project's <code>mcp-server/README.md</code> for the same instructions any time).
+            Create a token, then copy the config it shows you into your MCP client — no separate install step
+            needed, <code>npx</code> runs it straight from GitHub.
           </p>
         )}
 

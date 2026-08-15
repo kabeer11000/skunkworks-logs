@@ -5,6 +5,9 @@
   "type": "module",
   "description": "MCP server exposing SkunkWorks Logs to AI agents (Claude Desktop, Claude Code, etc.) via an account API token.",
   "main": "index.js",
+  "bin": {
+    "skunkworks-logs-mcp": "./index.js"
+  },
   "scripts": {
     "start": "node index.js"
   },
