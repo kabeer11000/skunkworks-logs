@@ -143,7 +143,7 @@ export function EditorToolbar({
       <div className="mx-1 h-4 w-px bg-border" />
       <button
         type="button"
-        title="Clean up with AI"
+        title="Refine with AI"
         onMouseDown={(e) => e.preventDefault()}
         onClick={handleCleanup}
         disabled={cleaning}

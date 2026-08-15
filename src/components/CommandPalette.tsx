@@ -3,6 +3,7 @@ import { atom } from 'nanostores'
 import { useStore } from '@nanostores/react'
 import { $drains } from '@/helpers/drains'
 import { getDrainDb } from '@/services/db'
+import { stripHtml } from '@/utils/stripHtml'
 import {
   Command,
   CommandDialog,
@@ -12,10 +13,6 @@ import {
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command'
-
-function stripHtml(html: string) {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
 
 interface EntryResult {
   dbName: string

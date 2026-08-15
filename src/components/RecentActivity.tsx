@@ -5,10 +5,7 @@ import { $drains } from '@/helpers/drains'
 import { $identity } from '@/services/identity'
 import { getDrainDb } from '@/services/db'
 import { loadLatestPage } from '@/utils/ulid-pages'
-
-function stripHtml(html: string) {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
+import { stripHtml } from '@/utils/stripHtml'
 
 function relativeTime(ts: number) {
   const diff = Date.now() - ts

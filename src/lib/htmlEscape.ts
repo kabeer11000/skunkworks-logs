@@ -12,7 +12,18 @@ export function escapeHtml(s: string) {
 }
 
 // Plain-text extraction for feeding stored entry HTML into an LLM prompt —
-// not a security boundary, just strips markup so the model sees prose.
+// not a security boundary, just strips markup so the model sees prose. Also
+// reverses escapeHtml's entity substitutions — entries that went through an
+// earlier AI cleanup/summary pass store literal "&#39;"-style entities in
+// their content, which the model should see as plain punctuation, not markup.
 export function stripHtmlTags(html: string) {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
 }

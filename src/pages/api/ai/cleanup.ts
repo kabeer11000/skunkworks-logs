@@ -11,13 +11,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   const body = await request.json().catch(() => ({}))
   const text = typeof body.text === 'string' ? body.text.trim() : ''
-  if (!text) return new Response(JSON.stringify({ error: 'Nothing to clean up' }), { status: 400 })
+  if (!text) return new Response(JSON.stringify({ error: 'Nothing to refine' }), { status: 400 })
 
   const raw = await chatComplete([
     {
       role: 'system',
       content:
-        'Rewrite the following rough note into a clean, well-written engineering log entry — a sentence or two, plain prose, first person, no headings, no bullet points, no meta-commentary. Keep the original meaning and any technical details exactly as given.',
+        'Fix the grammar, spelling, and tone of the following engineering log entry. Make minimal changes — correct mistakes and smooth awkward phrasing, but keep the original wording, structure, and meaning as close to the original as possible. Do not rewrite it into different phrasing, add headings or bullet points, or add any meta-commentary. Preserve all technical details exactly as given.',
     },
     { role: 'user', content: text },
   ])
