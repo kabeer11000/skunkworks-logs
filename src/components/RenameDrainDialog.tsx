@@ -226,7 +226,7 @@ export default function RenameDrainDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-tags">Tags <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <div className="flex flex-wrap gap-1.5 rounded-md border border-input p-2 min-h-[42px]">
+              <div className="flex flex-wrap items-start content-start gap-1.5 rounded-md border border-input p-2 min-h-[42px]">
                 {tags.map((t) => (
                   <span
                     key={t}
