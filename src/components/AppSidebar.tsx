@@ -42,6 +42,7 @@ interface Drain {
   tags?: string[]
   visibility: 'shared' | 'private'
   role: 'owner' | 'member'
+  createdByTokenName?: string
 }
 
 function DrainCard({
@@ -156,8 +157,16 @@ function DrainCard({
       )}
 
       <div className="flex items-end justify-between gap-1.5 pt-1">
-        <span className="text-[0.6875rem] text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
           {drain.visibility === 'shared' ? 'Shared' : 'Private'}
+          {drain.createdByTokenName && (
+            <span
+              title={`Created by ${drain.createdByTokenName}`}
+              className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium text-violet-600 dark:bg-violet-500/20 dark:text-violet-300"
+            >
+              Agent-created
+            </span>
+          )}
         </span>
         {drain.visibility === 'shared' && <AvatarGroup emails={members} max={3} />}
       </div>

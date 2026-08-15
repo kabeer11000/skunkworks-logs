@@ -49,6 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
     visibility,
     createdBy: caller.email,
     createdAt: Date.now(),
+    createdByTokenName: caller.tokenName,
   })
   await addDirectoryDrain(caller.email, {
     dbName,
@@ -58,6 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
     visibility,
     role: 'owner',
     joinedAt: Date.now(),
+    createdByTokenName: caller.tokenName,
   })
 
   return new Response(JSON.stringify({ dbName }), { status: 200, headers: { 'Content-Type': 'application/json' } })

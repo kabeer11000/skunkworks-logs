@@ -225,6 +225,10 @@ export interface DirectoryDrainEntry {
   // filtered out of the normal list (GET /api/drains) and only surface in
   // the trashed view (?trashed=true) — see api/drains/index.ts.
   trashedAt?: number | null
+  // Set when created via an API token (agent/MCP), not a real signed-in
+  // browser session — cached here (not just on the notebook doc) so the
+  // sidebar can show it with no extra fetch, same as title/tags.
+  createdByTokenName?: string
 }
 
 export async function getDirectoryDrains(email: string): Promise<DirectoryDrainEntry[]> {
