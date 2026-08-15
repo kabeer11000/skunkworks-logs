@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search } from 'lucide-react'
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Link, Inbox, Download, Search, KeyRound } from 'lucide-react'
 import { $commandPaletteOpen } from './CommandPalette'
 import { RecentActivity } from './RecentActivity'
+import { ApiTokensDialog } from './ApiTokensDialog'
 import { exportDrainMarkdown } from '@/utils/exportDrain'
 import { $drains, populateDrains, deleteDrain } from '@/helpers/drains'
 import { $identity, getStoredIdentityClient } from '@/services/identity'
@@ -177,6 +178,7 @@ export default function AppSidebar() {
     isOwner: boolean
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ dbName: string; title: string } | null>(null)
+  const [tokensOpen, setTokensOpen] = useState(false)
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
 
   const allTags = useMemo(() => {
@@ -258,9 +260,19 @@ export default function AppSidebar() {
             >
               <Search className="size-4" />
             </button>
+            <button
+              type="button"
+              title="API tokens"
+              onClick={() => setTokensOpen(true)}
+              className={`flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-secondary hover:text-foreground ${FOCUS_RING}`}
+            >
+              <KeyRound className="size-4" />
+            </button>
             <NewDrainDialog />
           </div>
         </div>
+
+        <ApiTokensDialog open={tokensOpen} onOpenChange={setTokensOpen} />
 
         {/* Drains */}
         <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">

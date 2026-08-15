@@ -59,6 +59,7 @@ function entryToBlockHtml(entry: any, rid: string) {
   if (entry.createdAt) p.setAttribute('data-created-at', String(entry.createdAt))
   p.setAttribute('data-created-by', safeName(entry.createdByName ?? entry.updatedByName))
   if (entry.source) p.setAttribute('data-source', entry.source)
+  if (entry.viaToken) p.setAttribute('data-via-token', entry.viaToken)
 
   return p.outerHTML
 }

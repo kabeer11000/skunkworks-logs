@@ -1,10 +1,10 @@
 import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react'
-import { History, GitCommit, Sparkles } from 'lucide-react'
+import { History, GitCommit, Sparkles, Bot } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { relativeTime, safeName, safeColor } from './utils'
 
 export function EntryBlockView({ node }: NodeViewProps) {
-  const { entryId, authorColor, authorName, updatedAt, createdAt, createdByName, source } = node.attrs
+  const { entryId, authorColor, authorName, updatedAt, createdAt, createdByName, source, viaToken } = node.attrs
   const isIngested = source === 'github'
   const isSummary = source === 'ai-summary'
   const SourceIcon = isSummary ? Sparkles : GitCommit
@@ -89,6 +89,12 @@ export function EntryBlockView({ node }: NodeViewProps) {
             {author}
           </div>
           <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            {viaToken && (
+              <p className="flex items-center gap-1 text-violet-600">
+                <Bot className="size-3" />
+                via {viaToken}
+              </p>
+            )}
             {createdAt && (
               <p>
                 Created by {creator} · {relativeTime(Number(createdAt))}

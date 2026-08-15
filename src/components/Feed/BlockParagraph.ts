@@ -58,6 +58,16 @@ export const BlockParagraph = Paragraph.extend({
         parseHTML: (el: HTMLElement) => el.getAttribute('data-source'),
         renderHTML: (attrs: any) => (attrs.source ? { 'data-source': attrs.source } : {}),
       },
+      // Set only for entries created/edited via the agent API
+      // (api/drains/[dbName]/entries*) with the token's name — this is
+      // still a real person's entry (unlike source: 'github'/'ai-summary'),
+      // just agent-mediated, so it's a small badge alongside the normal
+      // author info rather than a replacement for it.
+      viaToken: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-via-token'),
+        renderHTML: (attrs: any) => (attrs.viaToken ? { 'data-via-token': attrs.viaToken } : {}),
+      },
       // Explicitly managed by ensureLeadingComposer in Feed/index.tsx —
       // distinguishes "the one pinned composer slot at the top" from any
       // other paragraph that happens to be empty (e.g. a real entry edited

@@ -245,6 +245,77 @@ export async function removeDirectoryDrain(email: string, dbName: string) {
   )
 }
 
+// Account-level API tokens — for external agents/tools (MCP server), not
+// tied to any one drain (unlike the public/ingestion tokens below, which
+// are drain-scoped and don't identify a user). A token authenticates AS
+// the account it belongs to, so `requireAuth` (lib/requireAuth.ts) can
+// resolve one straight to an email, same as it already does for a Basic
+// auth password check.
+export interface ApiToken {
+  token: string
+  name: string
+  createdAt: number
+  lastUsedAt: number | null
+}
+
+export async function createApiToken(email: string, name: string): Promise<string> {
+  const token = ulid()
+  await ensureDirectoryDbExists()
+  await updateAdminDoc(
+    DIRECTORY_DB,
+    `user:${email}`,
+    (doc) => ({
+      ...doc,
+      apiTokens: [...(doc.apiTokens ?? []), { token, name, createdAt: Date.now(), lastUsedAt: null }],
+    }),
+    () => ({ _id: `user:${email}`, type: 'directory', drains: [], apiTokens: [] })
+  )
+  await putAdminDoc(DIRECTORY_DB, { _id: `apiToken:${token}`, email })
+  return token
+}
+
+export async function listApiTokens(email: string): Promise<ApiToken[]> {
+  const doc = await getAdminDoc(DIRECTORY_DB, `user:${email}`)
+  return doc?.apiTokens ?? []
+}
+
+export async function revokeApiToken(email: string, token: string) {
+  await updateAdminDoc(
+    DIRECTORY_DB,
+    `user:${email}`,
+    (doc) => ({ ...doc, apiTokens: (doc.apiTokens ?? []).filter((t: ApiToken) => t.token !== token) }),
+    () => ({ _id: `user:${email}`, type: 'directory', drains: [], apiTokens: [] })
+  )
+  const reverseDoc = await getAdminDoc(DIRECTORY_DB, `apiToken:${token}`)
+  if (reverseDoc) {
+    await adminFetch(`/${DIRECTORY_DB}/${encodeURIComponent(reverseDoc._id)}?rev=${reverseDoc._rev}`, {
+      method: 'DELETE',
+    }).catch(() => {})
+  }
+}
+
+export async function getUserByApiToken(token: string): Promise<{ email: string; tokenName: string } | null> {
+  const doc = await getAdminDoc(DIRECTORY_DB, `apiToken:${token}`)
+  if (!doc) return null
+  const userDoc = await getAdminDoc(DIRECTORY_DB, `user:${doc.email}`)
+  const tokenName = (userDoc?.apiTokens ?? []).find((t: ApiToken) => t.token === token)?.name ?? 'API token'
+  return { email: doc.email, tokenName }
+}
+
+export async function touchApiTokenLastUsed(email: string, token: string) {
+  await updateAdminDoc(
+    DIRECTORY_DB,
+    `user:${email}`,
+    (doc) => ({
+      ...doc,
+      apiTokens: (doc.apiTokens ?? []).map((t: ApiToken) =>
+        t.token === token ? { ...t, lastUsedAt: Date.now() } : t
+      ),
+    }),
+    () => ({ _id: `user:${email}`, type: 'directory', drains: [], apiTokens: [] })
+  ).catch(() => {})
+}
+
 // Both public share links (`/public/:token`) and GitHub ingestion URLs
 // (`/api/ingest/:token`) need to resolve a bare token back to a dbName
 // without knowing it in advance — no per-drain database can answer "which
@@ -401,6 +472,88 @@ export async function getPublicEntries(dbName: string) {
     .map((r: any) => r.doc)
     .filter(Boolean)
     .sort((a: any, b: any) => a.createdAt - b.createdAt)
+}
+
+// Entry CRUD for the agent API (src/pages/api/drains/[dbName]/entries*) —
+// entries otherwise only ever go through direct PouchDB<->CouchDB sync
+// using the browser's own login, never through this app's own API at all.
+// Writes go through the admin credential, which bypasses validate_doc_update
+// entirely (it explicitly exempts _admin), so the author-only edit/delete
+// rule it enforces for real users has to be re-implemented here at the app
+// level — otherwise an API token would end up MORE powerful than a signed-in
+// user, not at parity with one.
+export async function getEntriesPage(dbName: string, limit: number, before?: string) {
+  const qs = new URLSearchParams({
+    startkey: JSON.stringify(before ? `entry:${before}` : 'entry:￿'),
+    endkey: JSON.stringify('entry:'),
+    descending: 'true',
+    include_docs: 'true',
+    limit: String(limit),
+    ...(before ? { skip: '1' } : {}),
+  })
+  const res = await adminFetch(`/${dbName}/_all_docs?${qs}`)
+  if (!res.ok) throw new Error(`Failed to read entries for ${dbName} (${res.status})`)
+  const data = await res.json()
+  return data.rows.map((r: any) => r.doc).filter(Boolean)
+}
+
+export async function createUserEntry(
+  dbName: string,
+  content: string,
+  identity: { email: string; name: string; color: string },
+  viaToken: string
+) {
+  const now = Date.now()
+  const doc = {
+    _id: `entry:${ulid()}`,
+    type: 'entry',
+    content,
+    createdBy: identity.email,
+    createdByName: identity.name,
+    createdByColor: identity.color,
+    createdByEmail: identity.email,
+    createdAt: now,
+    updatedBy: identity.email,
+    updatedByName: identity.name,
+    updatedByColor: identity.color,
+    updatedByEmail: identity.email,
+    updatedAt: now,
+    viaToken,
+  }
+  await putAdminDoc(dbName, doc)
+  return doc
+}
+
+// Both throw a recognizable error the API route maps to 403 when the
+// caller isn't the entry's own author — same restriction
+// validate_doc_update enforces for a real signed-in user's own sync.
+export async function updateUserEntryAsAuthor(
+  dbName: string,
+  entryId: string,
+  content: string,
+  identity: { email: string; name: string; color: string }
+) {
+  const doc = await getAdminDoc(dbName, `entry:${entryId}`)
+  if (!doc) throw new Error('NOT_FOUND')
+  if (doc.createdByEmail !== identity.email) throw new Error('FORBIDDEN')
+  const updated = {
+    ...doc,
+    content,
+    updatedBy: identity.email,
+    updatedByName: identity.name,
+    updatedByColor: identity.color,
+    updatedByEmail: identity.email,
+    updatedAt: Date.now(),
+  }
+  await putAdminDoc(dbName, updated)
+  return updated
+}
+
+export async function deleteUserEntryAsAuthor(dbName: string, entryId: string, email: string) {
+  const doc = await getAdminDoc(dbName, `entry:${entryId}`)
+  if (!doc) throw new Error('NOT_FOUND')
+  if (doc.createdByEmail !== email) throw new Error('FORBIDDEN')
+  await adminFetch(`/${dbName}/${encodeURIComponent(doc._id)}?rev=${doc._rev}`, { method: 'DELETE' })
 }
 
 // The directory caches each drain's title/description/tags so the sidebar
