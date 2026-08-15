@@ -12,9 +12,17 @@ export const $drains = atom<any[]>([])
 // see services/drainsApi.ts) — a plain refetch on mount is good enough for
 // now; the drain grid isn't something that needs to update live in the
 // background the way an open feed does.
+//
+// AppSidebar remounts on every navigation (no transition:persist) and calls
+// this on mount, so an outgoing page's still-in-flight call can resolve
+// after an incoming page's fresher one — a sequence counter, not just
+// "await and set", so a stale response can never overwrite a newer one
+// regardless of which resolves last.
+let populateDrainsSeq = 0
 export const populateDrains = async () => {
+    const seq = ++populateDrainsSeq
     const drains = await fetchDrains()
-    $drains.set(drains)
+    if (seq === populateDrainsSeq) $drains.set(drains)
 }
 
 export async function deleteDrain(dbName: string) {
