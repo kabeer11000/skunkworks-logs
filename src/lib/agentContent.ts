@@ -19,21 +19,38 @@ function colorsForEmail(email: string) {
 // @user@example.com — same syntax the client's own mention pill renders as
 // (see MentionExtension.ts), so a mention typed by a human and one typed
 // by an agent look identical once saved.
-const MENTION_RE = /@([^\s@]+@[^\s@]+\.[^\s@]+)/g
+const MENTION_RE = /@(?<email>[^\s@]+@[^\s@]+\.[^\s@]+)/
 // [[dbName]] or [[dbName#entryId]] — this app has no existing plain-text
 // form for a reference (the client's ReferenceExtension never renders one,
 // display is resolved live from node attrs), so this is a new convention
 // invented for agents/API callers to type by hand.
-const REFERENCE_RE = /\[\[([\w-]+)(?:#([\w-]+))?\]\]/g
-const COMBINED_RE = new RegExp(`(?:${MENTION_RE.source})|(?:${REFERENCE_RE.source})`, 'g')
+const REFERENCE_RE = /\[\[(?<refDb>[\w-]+)(?:#(?<refEntry>[\w-]+))?\]\]/
+// Inline markdown, limited to the marks the Tiptap editor itself supports
+// (bold/italic/strike/code — see EditorToolbar.tsx). No headings/lists:
+// every entry is a single paragraph node by design (Feed/index.tsx), so
+// block-level markdown has nowhere to go. Agents only ever send plaintext
+// or markdown here, never HTML, so escaping everything outside these
+// tokens is safe. ponytail: single-pass regex, not a real parser — no
+// nested spans (bold containing a mention) and no escaping of literal
+// */_/`/~ that isn't meant as markdown. Upgrade to a real markdown parser
+// if that turns out to matter.
+const CODE_RE = /`(?<code>[^`]+?)`/
+const BOLD_RE = /\*\*(?<boldStar>[^*]+?)\*\*|__(?<boldUnderscore>[^_]+?)__/
+const STRIKE_RE = /~~(?<strike>[^~]+?)~~/
+const ITALIC_RE = /\*(?<italicStar>[^*]+?)\*|_(?<italicUnderscore>[^_]+?)_/
+const COMBINED_RE = new RegExp(
+  `${CODE_RE.source}|${BOLD_RE.source}|${STRIKE_RE.source}|${ITALIC_RE.source}|${MENTION_RE.source}|${REFERENCE_RE.source}`,
+  'g'
+)
 
-// Converts an agent's plain-text entry/comment body into the same HTML
-// shape the browser editor's @mention and [[reference extensions produce —
-// without this, an agent's "@user@example.com" or "[[dbName]]" just saves
-// as inert escaped text instead of a real, clickable pill. No existence/
-// membership validation is done here (matching ReferencePill's own
-// "resolve access per-viewer at render time" design) — an invalid mention
-// or reference just renders as a plain/locked pill, not an error.
+// Converts an agent's plain-text/markdown entry or comment body into the
+// same HTML shape the browser editor's marks and @mention/[[reference
+// extensions produce — without this, an agent's "**bold**" or
+// "@user@example.com" just saves as inert escaped text (literal asterisks)
+// instead of real formatting. No existence/membership validation is done
+// for mentions/references (matching ReferencePill's own "resolve access
+// per-viewer at render time" design) — an invalid mention or reference
+// just renders as a plain/locked pill, not an error.
 export function renderAgentContent(text: string): string {
   let result = ''
   let lastIndex = 0
@@ -41,15 +58,27 @@ export function renderAgentContent(text: string): string {
   for (const match of text.matchAll(COMBINED_RE)) {
     result += escapeHtml(text.slice(lastIndex, match.index))
 
-    const [, email, dbName, entryId] = match
-    if (email) {
+    const { email, refDb, refEntry, code, boldStar, boldUnderscore, strike, italicStar, italicUnderscore } =
+      match.groups!
+    const bold = boldStar ?? boldUnderscore
+    const italic = italicStar ?? italicUnderscore
+
+    if (code !== undefined) {
+      result += `<code>${escapeHtml(code)}</code>`
+    } else if (bold !== undefined) {
+      result += `<strong>${escapeHtml(bold)}</strong>`
+    } else if (strike !== undefined) {
+      result += `<s>${escapeHtml(strike)}</s>`
+    } else if (italic !== undefined) {
+      result += `<em>${escapeHtml(italic)}</em>`
+    } else if (email) {
       const { text: color, background } = colorsForEmail(email)
       const safeEmail = escapeHtml(email)
       result += `<span class="mention-pill" data-type="mention" data-id="${safeEmail}" style="background:${background};color:${color}">@${safeEmail}</span>`
-    } else if (dbName) {
-      const safeDbName = escapeHtml(dbName)
-      const refType = entryId ? 'entry' : 'drain'
-      const entryAttr = entryId ? ` data-entry-id-ref="${escapeHtml(entryId)}"` : ''
+    } else if (refDb) {
+      const safeDbName = escapeHtml(refDb)
+      const refType = refEntry ? 'entry' : 'drain'
+      const entryAttr = refEntry ? ` data-entry-id-ref="${escapeHtml(refEntry)}"` : ''
       result += `<span data-type="reference" class="reference-pill-src" data-ref-type="${refType}" data-db-name="${safeDbName}"${entryAttr}></span>`
     }
 
