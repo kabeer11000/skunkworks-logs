@@ -6,7 +6,7 @@ import { $identity } from '@/services/identity'
 import { setAuthCredential } from '@/services/authSession'
 import AuthShell from './AuthShell'
 
-export default function Login({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState('')
@@ -79,9 +79,9 @@ export default function Login({ onSwitchToSignup }: { onSwitchToSignup: () => vo
         </Button>
         <p className="text-xs text-muted-foreground">
           Don't have an account?{' '}
-          <button type="button" className="underline" onClick={onSwitchToSignup}>
+          <a href="/signup" className="underline">
             Sign up
-          </button>
+          </a>
         </p>
       </form>
     </AuthShell>

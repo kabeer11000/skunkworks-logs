@@ -7,7 +7,7 @@ import { setAuthCredential } from '@/services/authSession'
 import { createGettingStartedDrain } from '@/helpers/drains'
 import AuthShell from './AuthShell'
 
-export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+export default function Onboarding() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -77,9 +77,9 @@ export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () =>
           {formError.includes('already exists') && (
             <>
               {' '}
-              <button type="button" className="underline" onClick={onSwitchToLogin}>
+              <a href="/login" className="underline">
                 Log in instead
-              </button>
+              </a>
             </>
           )}
         </div>
@@ -143,9 +143,9 @@ export default function Onboarding({ onSwitchToLogin }: { onSwitchToLogin: () =>
         </Button>
         <p className="text-xs text-muted-foreground">
           Already have an account?{' '}
-          <button type="button" className="underline" onClick={onSwitchToLogin}>
+          <a href="/login" className="underline">
             Log in
-          </button>
+          </a>
         </p>
       </form>
     </AuthShell>

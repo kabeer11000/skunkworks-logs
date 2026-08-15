@@ -1,26 +1,22 @@
 ---
 import Feed from "@/components/Feed";
 import PageShell from "@/components/PageShell";
-import AuthGate from "@/components/AuthGate";
 import SyncIndicator from "@/components/SyncIndicator";
 import DrainTitleChip from "@/components/DrainTitleChip";
 import Layout from "@/layouts/Layout.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
 const identity = cookie ? cookie.json() : null;
+if (!identity) return Astro.redirect('/login');
 const dbName = Astro.params.drain as string;
 ---
 
 <Layout>
-	{identity ? (
-		<PageShell client:load>
-			<div class="relative mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
-				<SyncIndicator dbName={dbName} client:load />
-				<DrainTitleChip dbName={dbName} client:load />
-				<Feed dbName={dbName} client:only="react" />
-			</div>
-		</PageShell>
-	) : (
-		<AuthGate client:load />
-	)}
+	<PageShell client:load>
+		<div class="relative mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
+			<SyncIndicator dbName={dbName} client:load />
+			<DrainTitleChip dbName={dbName} client:load />
+			<Feed dbName={dbName} client:only="react" />
+		</div>
+	</PageShell>
 </Layout>

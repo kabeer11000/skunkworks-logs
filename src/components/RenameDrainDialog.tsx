@@ -91,7 +91,7 @@ export default function RenameDrainDialog({
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const publicUrl = publicToken ? `${origin}/public/${publicToken}` : ''
+  const publicUrl = publicToken ? `${origin}/p/${publicToken}` : ''
 
   const [ingestionToken, setIngestionToken] = useState<string | null>(null)
   const [lastIngestedAt, setLastIngestedAt] = useState<number | null>(null)

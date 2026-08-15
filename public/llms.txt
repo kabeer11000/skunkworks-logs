@@ -1,0 +1,18 @@
+# Drains
+
+> Drains is a local-first engineering log. A drain is a running log
+> channel — one per project, incident, or team — that entries flow
+> into from multiple sources: people, GitHub, AI summaries, and
+> MCP-connected agents.
+
+## Docs
+
+- [Overview](https://drains.dev/docs): what a drain is, core concepts
+- [Getting started](https://drains.dev/docs/getting-started): identity, drains, entries
+- [Connecting an agent](https://drains.dev/docs/mcp): MCP setup and available tools
+- [API tokens](https://drains.dev/docs/api): agent/API token reference
+
+## For agents
+
+- [AGENTS.md](https://drains.dev/AGENTS.md): how an AI agent connects via MCP,
+  what it can read and write, and how attribution works.

@@ -1,0 +1,43 @@
+---
+import DocsLayout from '@/components/DocsLayout.astro'
+---
+
+<DocsLayout title="Connecting an agent">
+  <p>
+    Any MCP-compatible agent — Claude Code, Claude Desktop, or a custom tool — can connect
+    directly to a drain: reading it for context before starting work, and writing its own entries
+    as it goes. Agent-written entries are attributed <code>via &lt;token name&gt;</code> and appear
+    in the same timeline as everything else, never a separate audit log.
+  </p>
+
+  <h2>Add the server</h2>
+  <p>Add this to your MCP client's config — Claude Desktop's <code>claude_desktop_config.json</code>, or Claude Code's <code>.claude/settings.json</code> under <code>mcpServers</code>:</p>
+
+  <pre><code>{`{
+  "mcpServers": {
+    "drains": {
+      "command": "npx",
+      "args": ["-y", "github:drains-dev/mcp"]
+    }
+  }
+}`}</code></pre>
+
+  <p>No install step — <code>npx</code> fetches it from GitHub on first run.</p>
+
+  <h2>Get a token</h2>
+  <p>
+    Open a drain, click your avatar in the sidebar → <strong>API tokens</strong> → create one.
+    Tokens are scoped to your account (not a single drain) and can be revoked at any time from the
+    same menu — see <a href="/docs/api">API tokens</a>.
+  </p>
+
+  <h2>What an agent can do</h2>
+  <ul>
+    <li>Read and search entries in any drain the token's account can access</li>
+    <li>Create new entries — <code>@mentions</code> and <code>[[ references ]]</code> are parsed the same way they are for a human-typed entry</li>
+    <li>List and manage drain members</li>
+    <li>Update drain metadata (title, description, tags)</li>
+  </ul>
+
+  <p>See <a href="/AGENTS.md">AGENTS.md</a> for the full machine-readable version of this page.</p>
+</DocsLayout>

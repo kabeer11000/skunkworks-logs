@@ -204,8 +204,8 @@ export default function AppSidebar() {
     const identity = getStoredIdentityClient()
     $identity.set(identity)
 
-    // The sk_identity cookie (checked server-side to decide whether to show
-    // AuthGate at all) can outlive the sessionStorage credential the actual
+    // The sk_identity cookie (checked server-side to decide whether to
+    // redirect to /login) can outlive the sessionStorage credential the actual
     // API calls need — e.g. closing and reopening the browser clears
     // sessionStorage but not the year-long cookie. Without this check every
     // authenticated call below just throws "Not signed in" with no recourse.

@@ -322,7 +322,7 @@ export async function touchApiTokenLastUsed(email: string, token: string) {
   ).catch(() => {})
 }
 
-// Both public share links (`/public/:token`) and GitHub ingestion URLs
+// Both public share links (`/p/:token`) and GitHub ingestion URLs
 // (`/api/ingest/:token`) need to resolve a bare token back to a dbName
 // without knowing it in advance — no per-drain database can answer "which
 // token points at me" for a request that doesn't know which database to ask

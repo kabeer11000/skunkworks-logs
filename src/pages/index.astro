@@ -1,15 +1,16 @@
 ---
 import { NotebookPen } from "lucide-react";
 import PageShell from "@/components/PageShell";
-import AuthGate from "@/components/AuthGate";
 import Layout from "../layouts/Layout.astro";
+import LandingLayout from "@/components/LandingLayout.astro";
+import LandingPage from "@/components/LandingPage.astro";
 
 const cookie = Astro.cookies.get('sk_identity');
 const identity = cookie ? cookie.json() : null;
 ---
 
-<Layout>
-	{identity ? (
+{identity ? (
+	<Layout>
 		<PageShell client:load>
 			<div class="flex flex-1 items-center justify-center">
 				<div class="flex flex-col items-center gap-2 text-center">
@@ -23,7 +24,9 @@ const identity = cookie ? cookie.json() : null;
 				</div>
 			</div>
 		</PageShell>
-	) : (
-		<AuthGate client:load />
-	)}
-</Layout>
+	</Layout>
+) : (
+	<LandingLayout>
+		<LandingPage />
+	</LandingLayout>
+)}

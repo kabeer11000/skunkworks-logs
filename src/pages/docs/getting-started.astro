@@ -1,0 +1,33 @@
+---
+import DocsLayout from '@/components/DocsLayout.astro'
+---
+
+<DocsLayout title="Getting started">
+  <h2>1. Create an identity</h2>
+  <p>
+    <a href="/signup">Sign up</a> with your name, email, and a password. There's no email
+    verification step and no password-reset email flow — your credentials are checked directly
+    against your own account on each sign-in.
+  </p>
+
+  <h2>2. Open a drain</h2>
+  <p>
+    New accounts start with a short "Getting started" drain already in the sidebar, showing how
+    entries, comments, and drain management work. From there, create a new drain from the sidebar
+    for each project, incident channel, or team you want a log for. Right-click a drain (or use
+    its <code>…</code> menu) to rename it, tag it, copy its share link, or delete it.
+  </p>
+
+  <h2>3. Start typing</h2>
+  <p>
+    Click anywhere in the feed and start typing — every paragraph becomes its own entry the moment
+    you move to a new line. There's no save button; autosave and live sync handle the rest, even
+    if you go offline mid-sentence.
+  </p>
+
+  <h2>4. Invite others, or publish it</h2>
+  <p>
+    Shared drains can be opened up to specific people by email. Any drain can also be published as
+    a read-only link at <code>/p/:token</code> — no account needed to view it, grouped by day.
+  </p>
+</DocsLayout>

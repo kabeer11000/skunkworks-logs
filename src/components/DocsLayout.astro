@@ -1,0 +1,102 @@
+---
+import Layout from '@/layouts/Layout.astro'
+
+interface Props {
+  title: string
+}
+
+const { title } = Astro.props
+
+const NAV = [
+  { href: '/docs', label: 'Overview' },
+  { href: '/docs/getting-started', label: 'Getting started' },
+  { href: '/docs/mcp', label: 'Connecting an agent' },
+  { href: '/docs/api', label: 'API tokens' },
+]
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/'
+---
+
+<Layout>
+  <div class="mx-auto flex min-h-screen w-full max-w-5xl gap-10 px-6 py-12">
+    <aside class="hidden w-48 shrink-0 md:block">
+      <a href="/" class="mb-8 inline-block rounded-full border px-3 py-1.5 font-mono text-sm font-medium hover:bg-secondary transition-colors">
+        drains.dev
+      </a>
+      <nav class="space-y-1">
+        {NAV.map((item) => (
+          <a
+            href={item.href}
+            class={`block rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+              path === item.href
+                ? 'bg-secondary font-medium text-foreground'
+                : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+            }`}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+    </aside>
+
+    <main class="min-w-0 flex-1">
+      <h1 class="mb-8 text-3xl font-bold tracking-tight">{title}</h1>
+      <div class="docs-prose max-w-2xl">
+        <slot />
+      </div>
+    </main>
+  </div>
+
+  <style>
+    .docs-prose :global(p) {
+      margin-bottom: 1rem;
+      line-height: 1.7;
+      color: var(--foreground);
+    }
+    .docs-prose :global(h2) {
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .docs-prose :global(h2:first-child) {
+      margin-top: 0;
+    }
+    .docs-prose :global(ul) {
+      margin-bottom: 1rem;
+      padding-left: 1.25rem;
+      list-style: disc;
+    }
+    .docs-prose :global(li) {
+      margin-bottom: 0.4rem;
+      line-height: 1.7;
+    }
+    .docs-prose :global(code) {
+      background: var(--muted);
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.85em;
+      font-family: var(--font-mono);
+    }
+    .docs-prose :global(pre) {
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.25rem;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+    .docs-prose :global(pre code) {
+      background: none;
+      padding: 0;
+    }
+    .docs-prose :global(a) {
+      color: var(--foreground);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  </style>
+</Layout>

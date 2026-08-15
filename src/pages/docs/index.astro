@@ -1,0 +1,41 @@
+---
+import DocsLayout from '@/components/DocsLayout.astro'
+---
+
+<DocsLayout title="Overview">
+  <p>
+    Drains is a local-first engineering log. Instead of a doc that goes stale or a board full of
+    tickets, a drain is a running, timestamped, append-only record of what happened on a project —
+    releases, incidents, decisions — written as it happens.
+  </p>
+
+  <h2>Drains</h2>
+  <p>
+    A <strong>drain</strong> is one log channel. Create as many as you need — one per project,
+    incident, or team. Each drain can be kept private (encrypted client-side, visible only to you),
+    shared with invited collaborators by email, or published as a read-only link anyone can follow
+    at <code>/p/:token</code>.
+  </p>
+
+  <h2>Entries</h2>
+  <p>
+    Every paragraph you type in a drain is its own independent entry. There's no submit button —
+    entries autosave as you type and sync live to every device you're signed in on. Select any
+    text in an entry to leave a threaded comment on it.
+  </p>
+
+  <h2>Multiple sources, one log</h2>
+  <p>
+    Entries aren't only typed by you. A connected GitHub webhook logs commits, pull requests, and
+    issue activity automatically. AI can summarize a busy day into one entry, or refine an entry's
+    grammar and tone without rewriting it. And MCP-connected agents can read the log for context
+    and write their own entries as they work — see <a href="/docs/mcp">Connecting an agent</a>.
+  </p>
+
+  <h2>Identity</h2>
+  <p>
+    Signing up only needs a name, email, and password — no email verification step, and no
+    "forgot password" flow to build around. Your email deterministically derives a color and ID
+    that follows you across every device you sign into.
+  </p>
+</DocsLayout>
