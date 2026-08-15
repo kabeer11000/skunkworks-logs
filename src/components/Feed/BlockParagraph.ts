@@ -100,7 +100,15 @@ export const BlockParagraph = Paragraph.extend({
   // in place looked like.
   addKeyboardShortcuts() {
     return {
+      // A @mention or [[reference popup is open — let its own Enter
+      // handling (select the highlighted item) run instead of jumping to
+      // the composer. Extension registration order makes this plugin's
+      // keymap run before the suggestion plugins' handleKeyDown, so without
+      // this check Enter would always jump to composer instead of ever
+      // reaching the popup, confirmed directly (see MentionExtension.ts /
+      // ReferenceExtension.ts, whose popups both set data-suggestion-popup).
       Enter: () => {
+        if (document.querySelector('[data-suggestion-popup]')) return false
         this.editor.commands.focus(1)
         return true
       },

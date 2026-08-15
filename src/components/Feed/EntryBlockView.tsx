@@ -57,7 +57,7 @@ export function EntryBlockView({ node }: NodeViewProps) {
           contentEditable={false}
           className="pointer-events-none absolute text-neutral-400"
         >
-          Click to start typing, all your changes autosave…
+          Click to start typing, all your changes autosave… Type @ to mention someone, [[ to reference a drain or entry.
         </span>
       )}
       {!isComposer && <Popover>

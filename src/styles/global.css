@@ -219,6 +219,43 @@
     white-space: nowrap;
 }
 
+/* [[ reference pill (ReferenceExtension.ts / ReferencePill.tsx) — links to
+   another drain or entry, resolved per-viewer at render time. */
+.reference-pill a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    background: oklch(0.95 0.03 280);
+    color: oklch(0.45 0.12 280);
+    font-weight: 500;
+    text-decoration: none;
+    max-width: 320px;
+    overflow: hidden;
+}
+
+.reference-pill a span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reference-pill a:hover {
+    background: oklch(0.9 0.05 280);
+}
+
+.reference-pill-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    background: oklch(0.95 0 0);
+    color: oklch(0.6 0 0);
+    font-style: italic;
+}
+
 /* Comment highlight (CommentMark.ts) — the range a CommentCard is anchored to */
 .tiptap mark[data-comment-id] {
     background: oklch(0.9 0.11 95 / 0.6);

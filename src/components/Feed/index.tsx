@@ -17,6 +17,7 @@ import { BlockParagraph } from './BlockParagraph'
 import { AssignBlockId } from './AssignBlockId'
 import { CommentMark } from './CommentMark'
 import { createMentionExtension } from './MentionExtension'
+import { ReferenceExtension } from './ReferenceExtension'
 import { CommentsAside } from './CommentsAside'
 import { OutlineAside } from './OutlineAside'
 import { AddCommentPopover } from './AddCommentPopover'
@@ -131,6 +132,7 @@ export default function Feed({ dbName }: { dbName: string }) {
       CommentMark,
       AssignBlockId.configure({ getIdentity: () => identityRef.current }),
       createMentionExtension(dbName),
+      ReferenceExtension,
     ],
     content: '',
     onUpdate: () => scheduleSave(),

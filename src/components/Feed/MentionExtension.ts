@@ -37,6 +37,13 @@ function renderSuggestionList() {
   const draw = () => {
     if (!container) return
     container.innerHTML = ''
+    if (items.length === 0) {
+      const empty = document.createElement('div')
+      empty.className = 'px-2 py-1.5 text-xs text-muted-foreground'
+      empty.textContent = 'No matching members'
+      container.appendChild(empty)
+      return
+    }
     items.forEach((email, i) => {
       const btn = document.createElement('button')
       btn.type = 'button'
@@ -50,6 +57,11 @@ function renderSuggestionList() {
       }
       container!.appendChild(btn)
     })
+
+    const hint = document.createElement('div')
+    hint.className = 'mt-0.5 border-t px-2 pt-1 text-[10px] text-muted-foreground'
+    hint.textContent = '↑↓ navigate · ↵ select · Esc cancel'
+    container!.appendChild(hint)
   }
 
   return {
@@ -57,6 +69,7 @@ function renderSuggestionList() {
       items = props.items
       onPick = props.command ? (email: string) => props.command({ id: email }) : null
       container = document.createElement('div')
+      container.setAttribute('data-suggestion-popup', 'mention')
       container.className =
         'fixed z-50 min-w-[180px] max-w-[260px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md'
       document.body.appendChild(container)
