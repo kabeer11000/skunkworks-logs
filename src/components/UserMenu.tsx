@@ -186,6 +186,14 @@ export default function UserMenu({
           <History className="size-3.5" />
           Recently deleted
         </DropdownMenuItem>
+        {/* temp: Feedback menu item hidden — Sleekplan's widget provides its
+            own trigger UI now; restore this (and a Sleekplan open call) if
+            a menu entry point is wanted later.
+        <DropdownMenuItem onClick={openFeedbackWidget}>
+          <MessageSquarePlus className="size-3.5" />
+          Feedback
+        </DropdownMenuItem>
+        */}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={logout}>
           <LogOut className="size-3.5" />
