@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
 import { getDirectoryDrains, getEntriesPage, createUserEntry, stripEntryPrefix } from '@/lib/couchdb-admin'
 import { deriveIdentity } from '@/services/identity'
-import { escapeHtml } from '@/lib/htmlEscape'
+import { renderAgentContent } from '@/lib/agentContent'
 
 export const prerender = false
 
@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, params }) => {
   if (!content) return new Response(JSON.stringify({ error: 'content is required' }), { status: 400 })
 
   const identity = await deriveIdentity(caller!.email, caller!.email.split('@')[0])
-  const doc = await createUserEntry(dbName, `<p>${escapeHtml(content)}</p>`, { ...identity }, caller!.tokenName ?? 'API')
+  const doc = await createUserEntry(dbName, `<p>${renderAgentContent(content)}</p>`, { ...identity }, caller!.tokenName ?? 'API')
 
   return new Response(
     JSON.stringify({ entry: stripEntryPrefix(doc) }),

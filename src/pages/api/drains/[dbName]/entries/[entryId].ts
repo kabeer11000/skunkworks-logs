@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { requireAuth } from '@/lib/requireAuth'
 import { getDirectoryDrains, updateUserEntryAsAuthor, deleteUserEntryAsAuthor, stripEntryPrefix } from '@/lib/couchdb-admin'
-import { escapeHtml } from '@/lib/htmlEscape'
+import { renderAgentContent } from '@/lib/agentContent'
 import { deriveIdentity } from '@/services/identity'
 
 export const prerender = false
@@ -33,7 +33,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
 
   try {
     const identity = await deriveIdentity(caller!.email, caller!.email.split('@')[0])
-    const doc = await updateUserEntryAsAuthor(dbName, entryId, `<p>${escapeHtml(content)}</p>`, identity)
+    const doc = await updateUserEntryAsAuthor(dbName, entryId, `<p>${renderAgentContent(content)}</p>`, identity)
     return new Response(
       JSON.stringify({ entry: stripEntryPrefix(doc) }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

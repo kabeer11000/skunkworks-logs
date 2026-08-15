@@ -4,11 +4,15 @@ import { listDrainMembers } from '@/services/drainsApi'
 // Same deterministic-hue idea as deriveIdentity's color derivation, but
 // synchronous (no crypto.subtle) since renderHTML can't await — good enough
 // for "consistent color per person," which is all a mention pill needs.
-function colorForEmail(email: string) {
+// Returns both a solid text color and a translucent background — string-
+// concatenating "22" (hex alpha shorthand) onto an hsl() value doesn't work
+// like it does for hex colors, hsl() needs its own explicit alpha argument,
+// confirmed by testing the resulting CSS wasn't being applied.
+function colorsForEmail(email: string) {
   let hash = 0
   for (let i = 0; i < email.length; i++) hash = (hash * 31 + email.charCodeAt(i)) | 0
   const hue = Math.abs(hash) % 360
-  return `hsl(${hue}, 35%, 45%)`
+  return { text: `hsl(${hue}, 35%, 45%)`, background: `hsl(${hue}, 35%, 45%, 0.13)` }
 }
 
 // Cached per drain for the lifetime of this editor instance — members don't
@@ -129,14 +133,14 @@ export function createMentionExtension(dbName: string) {
     // parseHTML (which matches span[data-type="mention"]) can't round-trip
     // a mention back out of stored/reloaded content.
     renderHTML({ node }) {
-      const color = colorForEmail(node.attrs.id || '')
+      const { text: color, background } = colorsForEmail(node.attrs.id || '')
       return [
         'span',
         {
           class: 'mention-pill',
           'data-type': 'mention',
           'data-id': node.attrs.id,
-          style: `background:${color}22;color:${color}`,
+          style: `background:${background};color:${color}`,
         },
         `@${node.attrs.id}`,
       ]
