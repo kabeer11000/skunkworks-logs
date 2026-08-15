@@ -22,42 +22,24 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
       rel="stylesheet"
     />
     <style is:global>
-      :root {
-        --font-sans: 'Inter', sans-serif;
-        /* temp dark mode: light overrides commented out, uses .dark vars from global.css
-        --background: oklch(1 0 0);
-        --foreground: oklch(0.145 0 0);
-        --muted: oklch(0.97 0 0);
-        --muted-foreground: oklch(0.556 0 0);
-        --border: oklch(0.922 0 0);
-        */
-        --radius: 0.75rem;
-      }
-
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: var(--font-sans);
-        background: var(--background);
-        color: var(--foreground);
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-
       html {
         scroll-behavior: smooth;
       }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
     </style>
   </head>
-  <body>
+  <body class="dark bg-background text-foreground antialiased">
     <slot />
   </body>
 </html>
