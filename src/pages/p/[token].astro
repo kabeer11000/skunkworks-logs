@@ -25,9 +25,14 @@ function dayLabel(ts: number) {
 }
 
 let lastDay = "";
+
+const pageTitle = resolved ? `${notebook?.title || "Untitled"} — Drains` : "Link not found — Drains";
+const pageDescription = resolved
+	? notebook?.description || "A running engineering log published with Drains."
+	: "This share link is no longer valid.";
 ---
 
-<Layout>
+<Layout title={pageTitle} description={pageDescription}>
 	<div class="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col overflow-y-auto px-4 py-10">
 		{!resolved ? (
 			<p class="text-center text-sm text-muted-foreground">This link is no longer valid.</p>

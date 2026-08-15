@@ -3,9 +3,10 @@ import Layout from '@/layouts/Layout.astro'
 
 interface Props {
   title: string
+  description?: string
 }
 
-const { title } = Astro.props
+const { title, description } = Astro.props
 
 const NAV = [
   { href: '/docs', label: 'Overview' },
@@ -17,7 +18,7 @@ const NAV = [
 const path = Astro.url.pathname.replace(/\/$/, '') || '/'
 ---
 
-<Layout>
+<Layout title={`${title} — Drains docs`} description={description}>
   <div class="mx-auto flex min-h-screen w-full max-w-5xl gap-10 px-6 py-12">
     <aside class="hidden w-48 shrink-0 md:block">
       <a href="/" class="mb-8 inline-block rounded-full border px-3 py-1.5 font-mono text-sm font-medium hover:bg-secondary transition-colors">

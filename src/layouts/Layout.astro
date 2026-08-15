@@ -1,6 +1,20 @@
 ---
 import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
+
+interface Props {
+	title?: string;
+	description?: string;
+	noindex?: boolean;
+}
+
+const {
+	title = "Drains",
+	description = "Drains is a local-first engineering log. Commits, incidents, decisions, and AI summaries — everything that happens on a project, in one running log.",
+	noindex = false,
+} = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://drains.dev").toString();
 ---
 
 <!doctype html>
@@ -9,7 +23,21 @@ import { ClientRouter } from "astro:transitions";
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Drains</title>
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalUrl} />
+		{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Drains" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonicalUrl} />
+
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+
 		<script is:inline>
 			(function () {
 				var t = localStorage.getItem('sk_theme') || 'system';

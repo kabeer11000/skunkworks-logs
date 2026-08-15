@@ -6,6 +6,6 @@ const cookie = Astro.cookies.get('sk_identity');
 if (cookie) return Astro.redirect('/');
 ---
 
-<Layout>
+<Layout title="Log in — Drains" description="Log in to Drains, your local-first engineering log.">
 	<Login client:load />
 </Layout>

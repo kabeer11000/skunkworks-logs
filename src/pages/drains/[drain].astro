@@ -11,7 +11,7 @@ if (!identity) return Astro.redirect('/login');
 const dbName = Astro.params.drain as string;
 ---
 
-<Layout>
+<Layout noindex>
 	<PageShell client:load>
 		<div class="relative mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
 			<SyncIndicator dbName={dbName} client:load />

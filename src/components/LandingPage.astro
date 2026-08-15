@@ -81,11 +81,22 @@ const AGENT = '#34d399'
       <path class="flow-path" d="M373,10 C373,55 480,55 498,88" fill="none" stroke={AI} stroke-width="1.5" opacity="0.7" style="animation-delay: -0.7s" />
       <path class="flow-path" d="M627,10 C627,55 520,55 502,88" fill="none" stroke={HUMAN} stroke-width="1.5" opacity="0.7" style="animation-delay: -1.4s" />
       <path class="flow-path" d="M880,10 C880,60 520,60 504,88" fill="none" stroke={AGENT} stroke-width="1.5" opacity="0.7" style="animation-delay: -2.1s" />
-      <g font-family="var(--font-mono)" font-size="12" fill="var(--muted-foreground)">
-        <circle cx="120" cy="8" r="3.5" fill={GITHUB} /><text x="120" y="26" text-anchor="middle">GitHub</text>
-        <circle cx="373" cy="8" r="3.5" fill={AI} /><text x="373" y="26" text-anchor="middle">AI</text>
-        <circle cx="627" cy="8" r="3.5" fill={HUMAN} /><text x="627" y="26" text-anchor="middle">You</text>
-        <circle cx="880" cy="8" r="3.5" fill={AGENT} /><text x="880" y="26" text-anchor="middle">Agent</text>
+      <g font-family="var(--font-mono)" text-anchor="middle">
+        <circle cx="120" cy="10" r="9" fill={GITHUB} />
+        <text x="120" y="13" font-size="8" font-weight="600" fill="white">PR</text>
+        <text x="120" y="34" font-size="13" font-weight="500" fill="var(--foreground)">Pull requests</text>
+
+        <circle cx="373" cy="10" r="9" fill={AI} />
+        <text x="373" y="13" font-size="8" font-weight="600" fill="white">AI</text>
+        <text x="373" y="34" font-size="13" font-weight="500" fill="var(--foreground)">AI</text>
+
+        <circle cx="627" cy="10" r="9" fill={HUMAN} />
+        <text x="627" y="13" font-size="8" font-weight="600" fill="white">Y</text>
+        <text x="627" y="34" font-size="13" font-weight="500" fill="var(--foreground)">You</text>
+
+        <circle cx="880" cy="10" r="9" fill={AGENT} />
+        <text x="880" y="13" font-size="8" font-weight="600" fill="white">T</text>
+        <text x="880" y="34" font-size="13" font-weight="500" fill="var(--foreground)">Team</text>
       </g>
     </svg>
 

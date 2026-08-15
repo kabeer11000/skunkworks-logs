@@ -6,6 +6,6 @@ const cookie = Astro.cookies.get('sk_identity');
 if (cookie) return Astro.redirect('/');
 ---
 
-<Layout>
+<Layout title="Sign up — Drains" description="Create a free Drains account — no email verification, no pricing decided yet, just a name, email, and password.">
 	<Onboarding client:load />
 </Layout>
