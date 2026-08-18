@@ -11,7 +11,11 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   site: 'https://drains.dev',
   integrations: [react()],
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: true,
+    },
+  }),
   output: "server",
   vite: {
     // Astro only exposes PUBLIC_-prefixed vars to client bundles by default,
